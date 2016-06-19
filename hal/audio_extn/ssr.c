@@ -36,7 +36,19 @@
 #include "audio_extn.h"
 #include "platform.h"
 #include "platform_api.h"
+#ifndef _OSS
 #include "surround_rec_interface.h"
+#else
+typedef struct get_param_data {
+    const char *name;
+    get_param *get_param_fn;
+} get_param_data_t;
+
+typedef struct set_param_data {
+    const char *name;
+    set_param *set_param_fn;
+} set_param_data_t;
+#endif
 
 #ifdef DYNAMIC_LOG_ENABLED
 #include <log_xml_parser.h>
