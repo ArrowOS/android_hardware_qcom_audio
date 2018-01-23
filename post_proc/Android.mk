@@ -10,6 +10,18 @@ qcom_post_proc_common_cflags := \
 
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS += -Wno-unused-variable
+LOCAL_CFLAGS += -Wno-sign-compare
+LOCAL_CFLAGS += -Wno-unused-parameter
+LOCAL_CFLAGS += -Wno-unused-label
+LOCAL_CFLAGS += -Wno-gnu-designator
+LOCAL_CFLAGS += -Wno-typedef-redefinition
+LOCAL_CFLAGS += -Wno-shorten-64-to-32
+LOCAL_CFLAGS += -Wno-tautological-compare
+LOCAL_CFLAGS += -Wno-unused-function
+LOCAL_CFLAGS += -Wno-unused-local-typedef
+LOCAL_CFLAGS += -Wno-format
+
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_PROXY_DEVICE)),true)
     LOCAL_CFLAGS += -DAFE_PROXY_ENABLED
 endif
@@ -70,6 +82,17 @@ include $(BUILD_SHARED_LIBRARY)
 ifeq ($(strip $(AUDIO_FEATURE_ENABLED_HW_ACCELERATED_EFFECTS)),true)
 include $(CLEAR_VARS)
 
+LOCAL_CFLAGS += -Wno-unused-variable
+LOCAL_CFLAGS += -Wno-sign-compare
+LOCAL_CFLAGS += -Wno-unused-parameter
+LOCAL_CFLAGS += -Wno-unused-label
+LOCAL_CFLAGS += -Wno-gnu-designator
+LOCAL_CFLAGS += -Wno-typedef-redefinition
+LOCAL_CFLAGS += -Wno-shorten-64-to-32
+LOCAL_CFLAGS += -Wno-tautological-compare
+LOCAL_CFLAGS += -Wno-unused-function
+LOCAL_CFLAGS += -Wno-unused-local-typedef
+LOCAL_CFLAGS += -Wno-format
 LOCAL_SRC_FILES := EffectsHwAcc.cpp
 
 LOCAL_C_INCLUDES := \
@@ -94,6 +117,7 @@ include $(BUILD_STATIC_LIBRARY)
 endif
 
 
+
 ################################################################################
 
 ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv,$(TARGET_BOARD_PLATFORM)),)
@@ -101,6 +125,17 @@ ifneq ($(filter msm8992 msm8994 msm8996 msm8998 sdm660 sdm845 apq8098_latv,$(TAR
 include $(CLEAR_VARS)
 
 LOCAL_CFLAGS := -DLIB_AUDIO_HAL="/vendor/lib/hw/audio.primary."$(TARGET_BOARD_PLATFORM)".so"
+LOCAL_CFLAGS += -Wno-unused-variable
+LOCAL_CFLAGS += -Wno-sign-compare
+LOCAL_CFLAGS += -Wno-unused-parameter
+LOCAL_CFLAGS += -Wno-unused-label
+LOCAL_CFLAGS += -Wno-gnu-designator
+LOCAL_CFLAGS += -Wno-typedef-redefinition
+LOCAL_CFLAGS += -Wno-shorten-64-to-32
+LOCAL_CFLAGS += -Wno-tautological-compare
+LOCAL_CFLAGS += -Wno-unused-function
+LOCAL_CFLAGS += -Wno-unused-local-typedef
+LOCAL_CFLAGS += -Wno-format
 
 LOCAL_SRC_FILES:= \
         volume_listener.c
