@@ -87,6 +87,7 @@ LOCAL_CFLAGS += -DUSE_XML_AUDIO_POLICY_CONF
 endif
 
 LOCAL_MODULE := libaudiopolicymanager
+LOCAL_CFLAGS := -Wno-error
 
 include $(BUILD_SHARED_LIBRARY)
 

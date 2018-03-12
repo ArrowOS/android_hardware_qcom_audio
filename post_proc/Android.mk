@@ -43,7 +43,7 @@ LOCAL_MODULE_TAGS := optional
 LOCAL_MODULE_RELATIVE_PATH := soundfx
 LOCAL_MODULE:= libqcompostprocbundle
 LOCAL_VENDOR_MODULE := true
-
+LOCAL_CFLAGS                  += -Wno-error
 LOCAL_ADDITIONAL_DEPENDENCIES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES := \
@@ -77,6 +77,6 @@ endif
 
 LOCAL_MODULE:= libhwacceffectswrapper
 LOCAL_VENDOR_MODULE := true
-
+LOCAL_CFLAGS += -Wno-error
 include $(BUILD_STATIC_LIBRARY)
 endif
