@@ -79,9 +79,7 @@
 #include "voice_extn.h"
 #include "ip_hdlr_intf.h"
 #include "audio_amplifier.h"
-<<<<<<< HEAD
 #include "ultrasound.h"
->>>>>>> c1b585fcb... msm8998: ultrasound: Initial open source hal for Elliptic Ultrasound
 
 #include "sound/compress_params.h"
 #include "sound/asound.h"
@@ -994,6 +992,9 @@ int enable_audio_route(struct audio_device *adev,
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_BUSY);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_BUSY);
     audio_extn_utils_send_app_type_cfg(adev, usecase);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+    if (usecase->id != USECASE_AUDIO_ULTRASOUND_TX)
+#endif
     audio_extn_utils_send_audio_calibration(adev, usecase);
     if ((usecase->type == PCM_PLAYBACK) && is_offload_usecase(usecase->id)) {
         out = usecase->stream.out;
@@ -1097,6 +1098,10 @@ int enable_snd_device(struct audio_device *adev,
                                         ST_EVENT_SND_DEVICE_BUSY);
         audio_extn_listen_update_device_status(snd_device,
                                         LISTEN_EVENT_SND_DEVICE_BUSY);
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (snd_device != SND_DEVICE_OUT_ULTRASOUND_HANDSET &&
+            snd_device != SND_DEVICE_IN_ULTRASOUND_MIC)
+#endif
         if (platform_get_snd_device_acdb_id(snd_device) < 0) {
             adev->snd_dev_ref_cnt[snd_device]--;
             audio_extn_sound_trigger_update_device_status(snd_device,
@@ -1390,6 +1395,12 @@ static void check_usecases_codec_backend(struct audio_device *adev,
               platform_get_snd_device_name(snd_device),
               platform_get_snd_device_name(usecase->out_snd_device),
               platform_check_backends_match(snd_device, usecase->out_snd_device));
+
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (usecase->id == USECASE_AUDIO_ULTRASOUND_RX)
+            continue;
+#endif
+
         if ((usecase->type != PCM_CAPTURE) && (usecase != uc_info)) {
             uc_derive_snd_device = derive_playback_snd_device(adev->platform,
                                                usecase, uc_info, snd_device);
@@ -1509,6 +1520,12 @@ static void check_usecases_capture_codec_backend(struct audio_device *adev,
         /*
          * TODO: Enhance below condition to handle BT sco/USB multi recording
          */
+
+#ifdef ELLIPTIC_ULTRASOUND_ENABLED
+        if (usecase->id == USECASE_AUDIO_ULTRASOUND_TX)
+            continue;
+#endif
+
         if (usecase->type != PCM_PLAYBACK &&
                 usecase != uc_info &&
                 (usecase->in_snd_device != snd_device || force_routing) &&
@@ -6652,10 +6669,6 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             ALOGI("wrong vr mode set");
         }
     }
-
-<<<<<<< HEAD
-    amplifier_set_parameters(parms);
-=======
     ret = str_parms_get_int(parms, "ultrasound-sensor", &val);
     if (ret >= 0) {
         if (val == 1) {
@@ -6664,8 +6677,7 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             us_stop();
         }
     }
-
->>>>>>> c1b585fcb... msm8998: ultrasound: Initial open source hal for Elliptic Ultrasound
+    amplifier_set_parameters(parms);
     audio_extn_set_parameters(adev, parms);
 done:
     str_parms_destroy(parms);
@@ -7688,12 +7700,10 @@ static int adev_open(const hw_module_t *module, const char *name,
 
     audio_extn_ds2_enable(adev);
 
-<<<<<<< HEAD
+    us_init(adev);
+
     if (amplifier_open(adev) != 0)
         ALOGE("Amplifier initialization failed");
-=======
-    us_init(adev);
->>>>>>> c1b585fcb... msm8998: ultrasound: Initial open source hal for Elliptic Ultrasound
 
     *device = &adev->device.common;
     adev->dsp_bit_width_enforce_mode =
