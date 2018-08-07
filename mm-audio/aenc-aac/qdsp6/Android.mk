@@ -15,6 +15,7 @@ libOmxAacEnc-def += -DVERBOSE
 libOmxAacEnc-def += -D_DEBUG
 libOmxAacEnc-def += -Wconversion
 libOmxAacEnc-def += -DAUDIOV2
+libOmxAacEnc-def += -Wno-sign-conversion -Wno-self-assign -Wno-format -Wno-macro-redefined -Wno-sign-compare
 
 libOmxAacEnc-def += -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-self-assign -Wno-parentheses-equality -Wno-format -Wno-sign-compare -Wno-tautological-compare -Wno-shorten-64-to-32 -Wno-unused-local-typedef
 # ---------------------------------------------------------------------------------

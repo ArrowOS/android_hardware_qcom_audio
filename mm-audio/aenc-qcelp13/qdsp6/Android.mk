@@ -15,6 +15,7 @@ libOmxQcelp13Enc-def += -DVERBOSE
 libOmxQcelp13Enc-def += -D_DEBUG
 libOmxQcelp13Enc-def += -Wconversion
 libOmxQcelp13Enc-def += -DAUDIOV2
+libOmxQcelp13Enc-def += -Wno-sign-conversion -Wno-self-assign -Wno-format -Wno-macro-redefined
 
 libOmxQcelp13Enc-def += -Wno-sign-conversion -Wno-shorten-64-to-32 -Wno-self-assign -Wno-parentheses-equality -Wno-format -Wno-sign-compare -Wno-tautological-compare -Wno-shorten-64-to-32 -Wno-unused-local-typedef
 
