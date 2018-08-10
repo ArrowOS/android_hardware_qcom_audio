@@ -384,7 +384,7 @@ ifeq ($(strip $(AUDIO_FEATURE_ELLIPTIC_ULTRASOUND_SUPPORT)),true)
     LOCAL_SRC_FILES += audio_extn/ultrasound.c
 endif
 
-LOCAL_CFLAGS += -Wall -Werror
+LOCAL_CFLAGS += -Wall -Werror -Wno-format
 LOCAL_CLANG_CFLAGS += -Wno-unused-variable -Wno-unused-function -Wno-missing-field-initializers
 
 LOCAL_COPY_HEADERS_TO   := mm-audio
