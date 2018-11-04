@@ -53,7 +53,7 @@ static int32_t mDevices = 0;
 static int32_t mCurrDevice = 0;
 static const char* DTS_EAGLE_STR = DTS_EAGLE_KEY;
 
-static int do_DTS_Eagle_params_stream(struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
+static int do_DTS_Eagle_params_stream(const struct stream_out *out, struct dts_eagle_param_desc_alsa *t, bool get) {
     char mixer_string[128];
     char mixer_str_query[128];
     struct mixer_ctl *ctl;
