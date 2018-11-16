@@ -169,9 +169,13 @@ void audio_extn_set_aanc_noise_level(struct audio_device *adev,
 #ifndef VBAT_MONITOR_ENABLED
 #define audio_extn_is_vbat_enabled()                     (0)
 #define audio_extn_can_use_vbat()                        (0)
+#define audio_extn_is_bcl_enabled()                     (0)
+#define audio_extn_can_use_bcl()                        (0)
 #else
 bool audio_extn_is_vbat_enabled(void);
 bool audio_extn_can_use_vbat(void);
+bool audio_extn_is_bcl_enabled(void);
+bool audio_extn_can_use_bcl(void);
 #endif
 
 #ifndef RAS_ENABLED
@@ -217,7 +221,8 @@ int32_t audio_extn_get_afe_proxy_channel_count();
 #define audio_extn_usb_deinit()                                        (0)
 #define audio_extn_usb_add_device(device, card)                        (0)
 #define audio_extn_usb_remove_device(device, card)                     (0)
-#define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) (0)
+#define audio_extn_usb_is_config_supported(bit_width, sample_rate, ch, pb) \
+                        (*bit_width=0, *sample_rate=0, *ch=0, 0)
 #define audio_extn_usb_enable_sidetone(device, enable)                 (0)
 #define audio_extn_usb_set_sidetone_gain(parms, value, len)            (0)
 #define audio_extn_usb_is_capture_supported()                          (0)
@@ -676,6 +681,7 @@ bool audio_extn_utils_is_dolby_format(audio_format_t format);
 int audio_extn_utils_get_bit_width_from_string(const char *);
 int audio_extn_utils_get_sample_rate_from_string(const char *);
 int audio_extn_utils_get_channels_from_string(const char *);
+void audio_extn_utils_release_snd_device(snd_device_t snd_device);
 
 #ifdef DS2_DOLBY_DAP_ENABLED
 #define LIB_DS2_DAP_HAL "vendor/lib/libhwdaphal.so"

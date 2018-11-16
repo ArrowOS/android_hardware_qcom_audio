@@ -55,7 +55,7 @@
     <ctl name="SLIMBUS_5_TX LSM Function" value="None" />
     <ctl name="SLIMBUS_1_TX LSM Function" value="None" />
     <ctl name="MADONOFF Switch" value="0" />
-    <ctl name="MAD Input" value="DMIC1" />
+    <ctl name="MAD Input" value="DMIC0" />
     <ctl name="MAD_SEL MUX" value="SPE" />
     <ctl name="MAD_INP MUX" value="DEC1" />
     <ctl name="MAD_CPE1 Switch" value="0" />
@@ -201,7 +201,7 @@
     </path>
 
     <path name="listen-cpe-handset-mic">
-        <ctl name="MAD Input" value="DMIC2" />
+        <ctl name="MAD Input" value="DMIC5" />
         <ctl name="MAD_SEL MUX" value="SPE" />
         <ctl name="MAD_INP MUX" value="MAD" />
         <ctl name="MAD_CPE1 Switch" value="1" />
@@ -210,10 +210,10 @@
     <path name="listen-cpe-handset-dmic">
         <ctl name="CLK MODE" value="INTERNAL" />
         <ctl name= "ADC MUX0" value="DMIC" />
-        <ctl name= "DMIC MUX0" value="DMIC2" />
+        <ctl name= "DMIC MUX0" value="DMIC5" />
         <ctl name= "DEC0 Volume" value="84" />
         <ctl name= "ADC MUX1" value="DMIC" />
-        <ctl name= "DMIC MUX1" value="DMIC5" />
+        <ctl name= "DMIC MUX1" value="DMIC0" />
         <ctl name= "DEC1 Volume" value="84" />
         <ctl name= "WDMA3 PORT0 MUX" value="DEC0" />
         <ctl name= "WDMA3 PORT1 MUX" value="DEC1" />
@@ -225,13 +225,13 @@
     <path name="listen-cpe-handset-tmic">
         <ctl name="CLK MODE" value="INTERNAL" />
         <ctl name= "ADC MUX0" value="DMIC" />
-        <ctl name= "DMIC MUX0" value="DMIC2" />
+        <ctl name= "DMIC MUX0" value="DMIC5" />
         <ctl name= "DEC0 Volume" value="84" />
         <ctl name= "ADC MUX1" value="DMIC" />
         <ctl name= "DMIC MUX1" value="DMIC0" />
         <ctl name= "DEC1 Volume" value="84" />
         <ctl name= "ADC MUX2" value="DMIC" />
-        <ctl name= "DMIC MUX2" value="DMIC5" />
+        <ctl name= "DMIC MUX2" value="DMIC0" />
         <ctl name= "DEC2 Volume" value="84" />
         <ctl name= "WDMA3 PORT0 MUX" value="DEC0" />
         <ctl name= "WDMA3 PORT1 MUX" value="DEC1" />
@@ -245,16 +245,16 @@
     <path name="listen-cpe-handset-qmic">
         <ctl name="CLK MODE" value="INTERNAL" />
         <ctl name= "ADC MUX0" value="DMIC" />
-        <ctl name= "DMIC MUX0" value="DMIC2" />
+        <ctl name= "DMIC MUX0" value="DMIC5" />
         <ctl name= "DEC0 Volume" value="84" />
         <ctl name= "ADC MUX1" value="DMIC" />
         <ctl name= "DMIC MUX1" value="DMIC0" />
         <ctl name= "DEC1 Volume" value="84" />
         <ctl name= "ADC MUX2" value="DMIC" />
-        <ctl name= "DMIC MUX2" value="DMIC5" />
+        <ctl name= "DMIC MUX2" value="DMIC0" />
         <ctl name= "DEC2 Volume" value="84" />
         <ctl name= "ADC MUX3" value="DMIC" />
-        <ctl name= "DMIC MUX3" value="DMIC1" />
+        <ctl name= "DMIC MUX3" value="DMIC3" />
         <ctl name= "DEC3 Volume" value="84" />
         <ctl name= "WDMA3 PORT0 MUX" value="DEC0" />
         <ctl name= "WDMA3 PORT1 MUX" value="DEC1" />
@@ -278,19 +278,19 @@
         <ctl name="CLK MODE" value="INTERNAL" />
         <ctl name="EC BUF MUX INP" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
-        <ctl name="DMIC MUX1" value="DMIC2" />
+        <ctl name="DMIC MUX1" value="DMIC5" />
     </path>
 
     <!-- path name used for low bandwidth FTRT codec interface -->
     <path name="listen-cpe-handset-mic low-speed-intf">
         <ctl name="MADONOFF Switch" value="1" />
         <ctl name="AIF4_MAD Mixer SLIM TX12" value="1" />
-        <ctl name="MAD Input" value="DMIC2" />
+        <ctl name="MAD Input" value="DMIC5" />
         <ctl name="CPE AFE MAD Enable" value="1"/>
     </path>
 
     <path name="listen-ape-handset-mic">
-        <ctl name="MAD Input" value="DMIC2" />
+        <ctl name="MAD Input" value="DMIC5" />
         <ctl name="MAD_SEL MUX" value="MSM" />
         <ctl name="MAD_INP MUX" value="MAD" />
         <ctl name="MAD_BROADCAST Switch" value="1" />
@@ -303,7 +303,7 @@
         <ctl name="SLIM_1_TX Channels" value="One" />
         <ctl name="CDC_IF TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
-        <ctl name="DMIC MUX2" value="DMIC2" />
+        <ctl name="DMIC MUX2" value="DMIC5" />
         <ctl name="IIR0 INP0 MUX" value="DEC2" />
     </path>
 
@@ -312,10 +312,10 @@
         <ctl name="AIF3_CAP Mixer SLIM TX3" value="1" />
         <ctl name="CDC_IF TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
-        <ctl name="DMIC MUX2" value="DMIC2" />
+        <ctl name="DMIC MUX2" value="DMIC0" />
         <ctl name="CDC_IF TX3 MUX" value="DEC3" />
         <ctl name="ADC MUX3" value="DMIC" />
-        <ctl name="DMIC MUX3" value="DMIC5" />
+        <ctl name="DMIC MUX3" value="DMIC3" />
         <ctl name="SLIM_1_TX Channels" value="Two" />
     </path>
 
@@ -326,10 +326,10 @@
         <ctl name="SLIM_1_TX Channels" value="Three" />
         <ctl name="CDC_IF TX0 MUX" value="DEC0" />
         <ctl name="ADC MUX0" value="DMIC" />
-        <ctl name="DMIC MUX0" value="DMIC2" />
+        <ctl name="DMIC MUX0" value="DMIC0" />
         <ctl name="CDC_IF TX1 MUX" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
-        <ctl name="DMIC MUX1" value="DMIC0" />
+        <ctl name="DMIC MUX1" value="DMIC2" />
         <ctl name="CDC_IF TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
         <ctl name="DMIC MUX2" value="DMIC5" />
@@ -343,16 +343,16 @@
         <ctl name="SLIM_1_TX Channels" value="Four" />
         <ctl name="CDC_IF TX0 MUX" value="DEC0" />
         <ctl name="ADC MUX0" value="DMIC" />
-        <ctl name="DMIC MUX0" value="DMIC2" />
+        <ctl name="DMIC MUX0" value="DMIC0" />
         <ctl name="CDC_IF TX1 MUX" value="DEC1" />
         <ctl name="ADC MUX1" value="DMIC" />
-        <ctl name="DMIC MUX1" value="DMIC0" />
+        <ctl name="DMIC MUX1" value="DMIC3" />
         <ctl name="CDC_IF TX2 MUX" value="DEC2" />
         <ctl name="ADC MUX2" value="DMIC" />
         <ctl name="DMIC MUX2" value="DMIC5" />
         <ctl name="CDC_IF TX3 MUX" value="DEC3" />
         <ctl name="ADC MUX3" value="DMIC" />
-        <ctl name="DMIC MUX3" value="DMIC1" />
+        <ctl name="DMIC MUX3" value="DMIC0" />
     </path>
 
     <path name="echo-reference">
