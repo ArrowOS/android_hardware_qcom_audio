@@ -28,7 +28,7 @@
 #include <cutils/str_parms.h>
 #include <log/log.h>
 #include <pthread.h>
-#include <cutils/sched_policy.h>
+#include <processgroup/sched_policy.h>
 #include <sys/resource.h>
 #include <system/thread_defs.h>
 
