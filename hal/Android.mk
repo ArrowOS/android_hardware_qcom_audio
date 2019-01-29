@@ -195,7 +195,8 @@ LOCAL_SHARED_LIBRARIES := \
 	libtinycompress \
 	libaudioroute \
 	libdl \
-	libexpat
+	libexpat \
+	libprocessgroup
 
 LOCAL_C_INCLUDES += \
 	external/tinyalsa/include \
