@@ -540,6 +540,20 @@ static bool is_supported_format(audio_format_t format)
     return false;
 }
 
+static bool is_supported_24bits_audiosource(audio_source_t source)
+{
+    switch (source) {
+        case AUDIO_SOURCE_UNPROCESSED:
+#ifdef ENABLED_24BITS_CAMCORDER
+        case AUDIO_SOURCE_CAMCORDER:
+#endif
+            return true;
+        default:
+            break;
+    }
+    return false;
+}
+
 static inline bool is_mmap_usecase(audio_usecase_t uc_id)
 {
     return (uc_id == USECASE_AUDIO_RECORD_AFE_PROXY) ||
@@ -1373,6 +1387,10 @@ int select_devices(struct audio_device *adev,
             out_snd_device = SND_DEVICE_OUT_SPEAKER;
     }
 
+    if (usecase->id == USECASE_INCALL_MUSIC_UPLINK) {
+        out_snd_device = SND_DEVICE_OUT_VOICE_MUSIC_TX;
+    }
+
     if (out_snd_device != SND_DEVICE_NONE &&
             out_snd_device != adev->last_logged_snd_device[uc_id][0]) {
         ALOGD("%s: changing use case %s output device from(%d: %s, acdb %d) to (%d: %s, acdb %d)",
@@ -1954,6 +1972,8 @@ static int stop_output_stream(struct stream_out *out)
     int i, ret = 0;
     struct audio_usecase *uc_info;
     struct audio_device *adev = out->dev;
+    bool has_voip_usecase =
+        get_usecase_from_list(adev, USECASE_AUDIO_PLAYBACK_VOIP) != NULL;
 
     ALOGV("%s: enter: usecase(%d: %s)", __func__,
           out->usecase, use_case_table[out->usecase]);
@@ -1987,15 +2007,7 @@ static int stop_output_stream(struct stream_out *out)
     /* Must be called after removing the usecase from list */
     if (out->devices & AUDIO_DEVICE_OUT_AUX_DIGITAL)
         check_and_set_hdmi_channels(adev, DEFAULT_HDMI_OUT_CHANNELS);
-    else if (out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
-        struct listnode *node;
-        struct audio_usecase *usecase;
-        list_for_each(node, &adev->usecase_list) {
-            usecase = node_to_item(node, struct audio_usecase, list);
-            if (usecase->devices & AUDIO_DEVICE_OUT_SPEAKER)
-                select_devices(adev, usecase->id);
-        }
-    } else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
+    else if (audio_is_usb_out_device(out->devices & AUDIO_DEVICE_OUT_ALL_USB)) {
         ret = check_and_set_usb_service_interval(adev, uc_info, false /*min*/);
         if (ret == 0) {
             /* default service interval was successfully updated,
@@ -2003,6 +2015,22 @@ static int stop_output_stream(struct stream_out *out)
             check_and_route_playback_usecases(adev, uc_info, uc_info->out_snd_device);
         }
         ret = 0;
+    }
+
+    if (has_voip_usecase ||
+            out->devices & AUDIO_DEVICE_OUT_SPEAKER_SAFE) {
+        struct listnode *node;
+        struct audio_usecase *usecase;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            if (usecase->type == PCM_CAPTURE || usecase == uc_info)
+                continue;
+
+            ALOGD("%s: select_devices at usecase(%d: %s) after removing the usecase(%d: %s)",
+                __func__, usecase->id, use_case_table[usecase->id],
+                out->usecase, use_case_table[out->usecase]);
+            select_devices(adev, usecase->id);
+        }
     }
 
     free(uc_info);
@@ -2105,8 +2133,13 @@ int start_output_stream(struct stream_out *out)
         if (out->offload_callback)
             compress_nonblock(out->compr, out->non_blocking);
 
-        if (adev->visualizer_start_output != NULL)
-            adev->visualizer_start_output(out->handle, out->pcm_device_id);
+        if (adev->visualizer_start_output != NULL) {
+            int capture_device_id =
+                platform_get_pcm_device_id(USECASE_AUDIO_RECORD_AFE_PROXY,
+                                           PCM_CAPTURE);
+            adev->visualizer_start_output(out->handle, out->pcm_device_id,
+                                          adev->snd_card, capture_device_id);
+        }
         if (adev->offload_effects_start_output != NULL)
             adev->offload_effects_start_output(out->handle, out->pcm_device_id);
     } else if (out->usecase == USECASE_AUDIO_PLAYBACK_MMAP) {
@@ -4684,20 +4717,24 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             adev->screen_off = true;
     }
 
-#ifndef MAXXAUDIO_QDSP_ENABLED
     ret = str_parms_get_int(parms, "rotation", &val);
     if (ret >= 0) {
         bool reverse_speakers = false;
+        int camera_rotation = CAMERA_ROTATION_LANDSCAPE;
         switch (val) {
         // FIXME: note that the code below assumes that the speakers are in the correct placement
         //   relative to the user when the device is rotated 90deg from its default rotation. This
         //   assumption is device-specific, not platform-specific like this code.
         case 270:
             reverse_speakers = true;
+            camera_rotation = CAMERA_ROTATION_INVERT_LANDSCAPE;
             break;
         case 0:
-        case 90:
         case 180:
+            camera_rotation = CAMERA_ROTATION_PORTRAIT;
+            break;
+        case 90:
+            camera_rotation = CAMERA_ROTATION_LANDSCAPE;
             break;
         default:
             ALOGE("%s: unexpected rotation of %d", __func__, val);
@@ -4707,10 +4744,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             // check and set swap
             //   - check if orientation changed and speaker active
             //   - set rotation and cache the rotation value
+            adev->camera_orientation =
+                           (adev->camera_orientation & ~CAMERA_ROTATION_MASK) | camera_rotation;
+#ifndef MAXXAUDIO_QDSP_ENABLED
             platform_check_and_set_swap_lr_channels(adev, reverse_speakers);
+#endif
         }
     }
-#endif
 
     ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_BT_SCO_WB, value, sizeof(value));
     if (ret >= 0) {
@@ -4775,6 +4815,32 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
                 audio_extn_a2dp_set_handoff_mode(false);
                 pthread_mutex_unlock(&usecase->stream.out->lock);
                 break;
+            }
+        }
+    }
+
+    //FIXME: to be replaced by proper video capture properties API
+    ret = str_parms_get_str(parms, AUDIO_PARAMETER_KEY_CAMERA_FACING, value, sizeof(value));
+    if (ret >= 0) {
+        int camera_facing = CAMERA_FACING_BACK;
+        if (strcmp(value, AUDIO_PARAMETER_VALUE_FRONT) == 0)
+            camera_facing = CAMERA_FACING_FRONT;
+        else if (strcmp(value, AUDIO_PARAMETER_VALUE_BACK) == 0)
+            camera_facing = CAMERA_FACING_BACK;
+        else {
+            ALOGW("%s: invalid camera facing value: %s", __func__, value);
+            goto done;
+        }
+        adev->camera_orientation =
+                       (adev->camera_orientation & ~CAMERA_FACING_MASK) | camera_facing;
+        struct audio_usecase *usecase;
+        struct listnode *node;
+        list_for_each(node, &adev->usecase_list) {
+            usecase = node_to_item(node, struct audio_usecase, list);
+            struct stream_in *in = usecase->stream.in;
+            if (usecase->type == PCM_CAPTURE && in != NULL &&
+                    in->source == AUDIO_SOURCE_CAMCORDER && !in->standby) {
+                select_devices(adev, in->usecase);
             }
         }
     }
@@ -5064,7 +5130,7 @@ static int adev_open_input_stream(struct audio_hw_device *dev,
 
            on error flinger will retry with supported format passed
          */
-        if (source != AUDIO_SOURCE_UNPROCESSED) {
+        if (!is_supported_24bits_audiosource(source)) {
             config->format = AUDIO_FORMAT_PCM_16_BIT;
             ret_error = true;
         } else if (config->format != AUDIO_FORMAT_PCM_8_24_BIT) {
@@ -5608,7 +5674,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     } else {
         ALOGV("%s: DLOPEN successful for %s", __func__, VISUALIZER_LIBRARY_PATH);
         adev->visualizer_start_output =
-                    (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
+                    (int (*)(audio_io_handle_t, int, int, int))dlsym(adev->visualizer_lib,
                                                     "visualizer_hal_start_output");
         adev->visualizer_stop_output =
                     (int (*)(audio_io_handle_t, int))dlsym(adev->visualizer_lib,
@@ -5686,6 +5752,8 @@ static int adev_open(const hw_module_t *module, const char *name,
     }
 
     adev->mic_break_enabled = property_get_bool("vendor.audio.mic_break", false);
+
+    adev->camera_orientation = CAMERA_DEFAULT;
 
     // commented as full set of app type cfg is sent from platform
     // audio_extn_utils_send_default_app_type_cfg(adev->platform, adev->mixer);
