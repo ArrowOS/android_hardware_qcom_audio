@@ -76,6 +76,8 @@
 #include "sound/compress_params.h"
 #include "sound/asound.h"
 
+#include <tinycompress/tinycompress.h>
+
 #define COMPRESS_OFFLOAD_NUM_FRAGMENTS 4
 /*DIRECT PCM has same buffer sizes as DEEP Buffer*/
 #define DIRECT_PCM_NUM_FRAGMENTS 2
