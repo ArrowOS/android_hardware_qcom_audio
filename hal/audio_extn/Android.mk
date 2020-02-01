@@ -1,3 +1,5 @@
+ifneq ($(strip $(TARGET_PROVIDES_AUDIO_EXTNS)),true)
+
 #--------------------------------------------
 #          Build SND_MONITOR LIB
 #--------------------------------------------
@@ -835,4 +837,4 @@ LOCAL_HEADER_LIBRARIES += libhardware_headers
 LOCAL_HEADER_LIBRARIES += libsystem_headers
 include $(BUILD_SHARED_LIBRARY)
 
-
+endif
