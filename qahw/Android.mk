@@ -23,9 +23,7 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_CFLAGS += -Wall -Werror
 
-LOCAL_COPY_HEADERS_TO   := mm-audio/qahw/inc
-LOCAL_COPY_HEADERS      := inc/qahw.h
-LOCAL_COPY_HEADERS      += inc/qahw_effect_api.h
+LOCAL_EXPORT_C_INCLUDE_DIRS := $(LOCAL_PATH)/inc
 
 LOCAL_PRELINK_MODULE    := false
 LOCAL_VENDOR_MODULE     := true
