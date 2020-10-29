@@ -246,7 +246,7 @@ LOCAL_MODULE_OWNER := google
 LOCAL_PROPRIETARY_MODULE := true
 
 LOCAL_C_INCLUDES := \
-    hardware/qcom/audio/hal \
+    $(call project-path-for,qcom-audio)/hal \
     system/media/audio/include/system \
     $(call include-path-for, audio-effects)
 
