@@ -1276,6 +1276,13 @@ int enable_audio_route(struct audio_device *adev,
         snd_device = usecase->out_snd_device;
     }
 
+    if (usecase->type == PCM_CAPTURE) {
+       if (platform_get_fluence_nn_state(adev->platform) == 0) {
+           platform_set_fluence_nn_state(adev->platform, true);
+           ALOGD("%s: set fluence nn capture state", __func__);
+       }
+    }
+
 #ifdef DS1_DOLBY_DAP_ENABLED
     audio_extn_dolby_set_dmid(adev);
     audio_extn_dolby_set_endpoint(adev);
@@ -1291,6 +1298,14 @@ int enable_audio_route(struct audio_device *adev,
         out = usecase->stream.out;
         if (out && out->compr)
             audio_extn_utils_compress_set_clk_rec_mode(usecase);
+    }
+
+    if (usecase->type == PCM_CAPTURE) {
+         if (platform_get_fluence_nn_state(adev->platform) == 1 &&
+             adev->fluence_nn_usecase_id == USECASE_INVALID ) {
+             adev->fluence_nn_usecase_id = usecase->id;
+             ALOGD("%s: assign fluence nn usecase %d", __func__, usecase->id);
+         }
     }
 
     if (usecase->type == PCM_CAPTURE) {
@@ -1378,6 +1393,11 @@ int disable_audio_route(struct audio_device *adev,
             platform_set_echo_reference(in->dev, false, &out_devices);
             in->ec_opened = false;
         }
+    }
+    if (usecase->id == adev->fluence_nn_usecase_id) {
+         platform_set_fluence_nn_state(adev->platform, false);
+         adev->fluence_nn_usecase_id = USECASE_INVALID;
+         ALOGD("%s: reset fluence nn capture state", __func__);
     }
     audio_extn_sound_trigger_update_stream_status(usecase, ST_EVENT_STREAM_FREE);
     audio_extn_listen_update_stream_status(usecase, LISTEN_EVENT_STREAM_FREE);
@@ -2893,7 +2913,8 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                     /* get the input with the highest priority source*/
                     priority_in = get_priority_input(adev);
 
-                    if (!priority_in)
+                    if (!priority_in ||
+                            audio_extn_auto_hal_overwrite_priority_for_auto(usecase->stream.in))
                         priority_in = usecase->stream.in;
                 }
                 if (compare_device_type(&usecase->device_list, AUDIO_DEVICE_IN_BUS)){
@@ -8796,12 +8817,14 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             struct listnode *node;
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
-                if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
+                if (usecase->stream.in && (usecase->type == PCM_CAPTURE ||
+                                           usecase->type == VOICE_CALL) &&
                     (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device))) {
                     ALOGD("BT_SCO ON, switch all in use case to it");
                     select_devices(adev, usecase->id);
                     }
-                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
+                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK ||
+                                            usecase->type == VOICE_CALL) &&
                     (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE))) {
                      ALOGD("BT_SCO ON, switch all out use case to it");
                      select_devices(adev, usecase->id);
@@ -10772,6 +10795,7 @@ static int adev_open(const hw_module_t *module, const char *name,
     adev->enable_voicerx = false;
     adev->bt_wb_speech_enabled = false;
     adev->swb_speech_mode = SPEECH_MODE_INVALID;
+    adev->fluence_nn_usecase_id = USECASE_INVALID;
     //initialize this to false for now,
     //this will be set to true through set param
     adev->vr_audio_mode_enabled = false;
