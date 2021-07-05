@@ -508,7 +508,7 @@ LOCAL_VENDOR_MODULE := true
 PRIMARY_HAL_PATH := $(call project-path-for,qcom-audio)/hal
 AUDIO_PLATFORM := $(TARGET_BOARD_PLATFORM)
 
-ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina holi lito bengal atoll sdm660 msm8937 msm8953 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
+ifneq ($(filter sdm845 sdm710 sdmshrike msmnile kona lahaina holi lito bengal atoll sdm660 msm8937 msm8953 msm8996 msm8998 $(MSMSTEPPE) $(TRINKET),$(TARGET_BOARD_PLATFORM)),)
   # B-family platform uses msm8974 code base
   AUDIO_PLATFORM := msm8974
   MULTIPLE_HW_VARIANTS_ENABLED := true
