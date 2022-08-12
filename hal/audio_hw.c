@@ -2729,7 +2729,10 @@ int select_devices(struct audio_device *adev, audio_usecase_t uc_id)
                                  (is_single_device_type_equal(&usecase->device_list,
                                                      AUDIO_DEVICE_IN_USB_HEADSET) &&
                                  is_single_device_type_equal(&vc_usecase->device_list,
-                                                        AUDIO_DEVICE_OUT_USB_HEADSET)))) {
+                                                        AUDIO_DEVICE_OUT_USB_HEADSET))||
+                                 (is_single_device_type_equal(&usecase->device_list,
+                                                     AUDIO_DEVICE_IN_BLUETOOTH_SCO_HEADSET) &&
+                                 is_codec_backend_out_device_type(&vc_usecase->device_list)))) {
                 in_snd_device = vc_usecase->in_snd_device;
                 out_snd_device = vc_usecase->out_snd_device;
             }
@@ -8788,12 +8791,13 @@ static int adev_set_parameters(struct audio_hw_device *dev, const char *kvpairs)
             list_for_each(node, &adev->usecase_list) {
                 usecase = node_to_item(node, struct audio_usecase, list);
                 if (usecase->stream.in && (usecase->type == PCM_CAPTURE) &&
-                    (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device))) {
+                    (!is_btsco_device(SND_DEVICE_NONE, usecase->in_snd_device)) && (is_sco_in_device_type(&usecase->stream.in->device_list))) {
                     ALOGD("BT_SCO ON, switch all in use case to it");
                     select_devices(adev, usecase->id);
                     }
-                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK) &&
-                    (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE))) {
+                if (usecase->stream.out && (usecase->type == PCM_PLAYBACK ||
+                                            usecase->type == VOICE_CALL) &&
+                    (!is_btsco_device(usecase->out_snd_device, SND_DEVICE_NONE)) && (is_sco_out_device_type(&usecase->stream.out->device_list))) {
                      ALOGD("BT_SCO ON, switch all out use case to it");
                      select_devices(adev, usecase->id);
                     }
