@@ -108,6 +108,7 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/sound_trigger_mixer_paths.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/sound_trigger_mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/mixer_paths_idp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_idp.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/mixer_paths_ipc.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_ipc.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/mixer_paths_wcd9375.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9375.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/mixer_paths_qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_qrd.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmsteppe/mixer_paths_wcd9375qrd.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_wcd9375qrd.xml \
@@ -353,6 +354,10 @@ PRODUCT_PACKAGES += \
     android.hardware.audio@6.0-impl \
     android.hardware.audio.effect@6.0 \
     android.hardware.audio.effect@6.0-impl
+
+# enable sound trigger hidl hal 2.3
+PRODUCT_PACKAGES += \
+    android.hardware.soundtrigger@2.3-impl \
 
 PRODUCT_PACKAGES_ENG += \
     VoicePrintTest \

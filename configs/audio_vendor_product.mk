@@ -141,6 +141,8 @@ MM_AUDIO += capi_v2_sumx
 MM_AUDIO += capi_v2_synth
 MM_AUDIO += capi_v2_avc
 MM_AUDIO += capi_v2_asrc
+MM_AUDIO += capi_v2_ecmx
+MM_AUDIO += capi_v2_vote
 MM_AUDIO += icc_module.so.1
 MM_AUDIO += sec_module.so.1
 MM_AUDIO += audio-nxp-auto
@@ -162,10 +164,15 @@ MM_AUDIO += libqtiautobundle
 MM_AUDIO += autoeffects
 MM_AUDIO += autoeffects.xml
 MM_AUDIO += audcalparam_commands.cfg
+MM_AUDIO += audcalparam_commands_elite.cfg
 MM_AUDIO += libsynth
 MM_AUDIO += libicc
 
+ifneq ( ,$(filter T Tiramisu 13, $(PLATFORM_VERSION)))
+MM_AUDIO += vendor.qti.hardware.automotive.audiocontrol-service
+else
 MM_AUDIO += android.hardware.automotive.audiocontrol-service.example
+endif
 MM_AUDIO += libaudiopowerpolicy
 endif
 
@@ -201,7 +208,7 @@ PRODUCT_PACKAGES_DEBUG += $(MM_AUDIO_DBG)
 # audio specific
 # ------
 TARGET_USES_AOSP := true
-TARGET_USES_AOSP_FOR_AUDIO := true
+TARGET_USES_AOSP_FOR_AUDIO := false
 
 # sdm845 specific rules
 ifeq ($(TARGET_BOARD_PLATFORM),sdm845)
@@ -211,6 +218,10 @@ endif
 
 # Audio configuration file
 ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),msmnile_au)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
+else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_au_km4)
+-include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
+else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX),msmnile_au_ar)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk
 else ifeq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX),msmnile_gvmq)
 -include $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/msmnile_au.mk

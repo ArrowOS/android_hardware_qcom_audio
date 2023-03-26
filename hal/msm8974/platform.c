@@ -186,6 +186,7 @@
 #define MAX_CAL_NAME 20
 #define MAX_MIME_TYPE_LENGTH 30
 #define MAX_SND_CARD_NAME_LENGTH 100
+#define FE_ID_TABLE_INDEX 2
 
 #define GET_IN_DEVICE_INDEX(SND_DEVICE) ((SND_DEVICE) - (SND_DEVICE_IN_BEGIN))
 
@@ -246,6 +247,12 @@ enum {
     CAL_MODE_SEND           = 0x1,
     CAL_MODE_PERSIST        = 0x2,
     CAL_MODE_RTAC           = 0x4
+};
+
+enum {
+    CAL_OFFSET_NONE       = 0x0,
+    CAL_OFFSET_ASM_TOP    = 0x1,
+    CAL_OFFSET_INDEX_MAX
 };
 
 #define PLATFORM_CONFIG_KEY_OPERATOR_INFO "operator_info"
@@ -344,13 +351,14 @@ struct platform_data {
     /* Audio calibration related functions */
     void                       *acdb_handle;
     int                        voice_feature_set;
-    acdb_init_t                acdb_init;
+    acdb_init_v2_t             acdb_init;
     acdb_init_v3_t             acdb_init_v3;
     acdb_init_v4_t             acdb_init_v4;
     acdb_deallocate_t          acdb_deallocate;
     acdb_send_audio_cal_t      acdb_send_audio_cal;
     acdb_send_audio_cal_v3_t   acdb_send_audio_cal_v3;
     acdb_send_audio_cal_v4_t   acdb_send_audio_cal_v4;
+    acdb_send_audio_cal_v6_t   acdb_send_audio_cal_v6;
     acdb_set_audio_cal_t       acdb_set_audio_cal;
     acdb_get_audio_cal_t       acdb_get_audio_cal;
     acdb_send_voice_cal_t      acdb_send_voice_cal;
@@ -402,145 +410,194 @@ struct  spkr_device_chmap {
     char chmap[AUDIO_CHANNEL_COUNT_MAX];
 };
 
-static int pcm_device_table[AUDIO_USECASE_MAX][2] = {
+#ifdef SOFT_VOLUME
+static int usecase_volume_params[AUDIO_USECASE_MAX][3] = {
+    [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = {-1,-1,-1},
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {-1,-1,-1},
+};
+#endif
+
+static int pcm_device_table[AUDIO_USECASE_MAX][4] = {
     [USECASE_AUDIO_PLAYBACK_DEEP_BUFFER] = {DEEP_BUFFER_PCM_DEVICE,
-                                            DEEP_BUFFER_PCM_DEVICE},
+                                            DEEP_BUFFER_PCM_DEVICE,
+                                            MSM_FRONTEND_DAI_MULTIMEDIA1,
+                                            MSM_FRONTEND_DAI_MULTIMEDIA1},
     [USECASE_AUDIO_PLAYBACK_WITH_HAPTICS] = {AUDIO_HAPTICS_PCM_DEVICE,
-                                             AUDIO_HAPTICS_PCM_DEVICE},
+                                             AUDIO_HAPTICS_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_PLAYBACK_HAPTICS] = {HAPTICS_PCM_DEVICE,
-                                             HAPTICS_PCM_DEVICE},
+                                             HAPTICS_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_PLAYBACK_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
-                                           LOWLATENCY_PCM_DEVICE},
+                                            LOWLATENCY_PCM_DEVICE,
+                                            MSM_FRONTEND_DAI_VOICEMMODE2,
+                                            MSM_FRONTEND_DAI_VOICEMMODE2},
     [USECASE_AUDIO_PLAYBACK_ULL]         = {MULTIMEDIA3_PCM_DEVICE,
-                                            MULTIMEDIA3_PCM_DEVICE},
+                                            MULTIMEDIA3_PCM_DEVICE,
+                                            MSM_FRONTEND_DAI_MULTIMEDIA3,
+                                            MSM_FRONTEND_DAI_MULTIMEDIA3},
     [USECASE_AUDIO_PLAYBACK_MULTI_CH] = {MULTIMEDIA2_PCM_DEVICE,
-                                         MULTIMEDIA2_PCM_DEVICE},
+                                         MULTIMEDIA2_PCM_DEVICE,
+                                         MSM_FRONTEND_DAI_MULTIMEDIA2,
+                                         MSM_FRONTEND_DAI_MULTIMEDIA2},
     [USECASE_AUDIO_PLAYBACK_HIFI] = {MULTIMEDIA2_PCM_DEVICE,
-                                     MULTIMEDIA2_PCM_DEVICE},
+                                     MULTIMEDIA2_PCM_DEVICE,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA2,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA2},
     [USECASE_AUDIO_PLAYBACK_TTS] = {MULTIMEDIA2_PCM_DEVICE,
-                                        MULTIMEDIA2_PCM_DEVICE},
+                                    MULTIMEDIA2_PCM_DEVICE,
+                                    MSM_FRONTEND_DAI_MULTIMEDIA2,
+                                    MSM_FRONTEND_DAI_MULTIMEDIA2},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD] =
-                     {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE},
+                     {PLAYBACK_OFFLOAD_DEVICE, PLAYBACK_OFFLOAD_DEVICE,
+                     MSM_FRONTEND_DAI_MULTIMEDIA5, MSM_FRONTEND_DAI_MULTIMEDIA5},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD2] =
-                     {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2},
+                     {PLAYBACK_OFFLOAD_DEVICE2, PLAYBACK_OFFLOAD_DEVICE2, -1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD3] =
-                     {PLAYBACK_OFFLOAD_DEVICE3, PLAYBACK_OFFLOAD_DEVICE3},
+                     {PLAYBACK_OFFLOAD_DEVICE3, PLAYBACK_OFFLOAD_DEVICE3, -1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD4] =
-                     {PLAYBACK_OFFLOAD_DEVICE4, PLAYBACK_OFFLOAD_DEVICE4},
+                     {PLAYBACK_OFFLOAD_DEVICE4, PLAYBACK_OFFLOAD_DEVICE4, -1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD5] =
-                     {PLAYBACK_OFFLOAD_DEVICE5, PLAYBACK_OFFLOAD_DEVICE5},
+                     {PLAYBACK_OFFLOAD_DEVICE5, PLAYBACK_OFFLOAD_DEVICE5,
+                     MSM_FRONTEND_DAI_MULTIMEDIA20,
+                     MSM_FRONTEND_DAI_MULTIMEDIA20},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD6] =
-                     {PLAYBACK_OFFLOAD_DEVICE6, PLAYBACK_OFFLOAD_DEVICE6},
+                     {PLAYBACK_OFFLOAD_DEVICE6, PLAYBACK_OFFLOAD_DEVICE6,
+                     MSM_FRONTEND_DAI_MULTIMEDIA21, MSM_FRONTEND_DAI_MULTIMEDIA21},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD7] =
-                     {PLAYBACK_OFFLOAD_DEVICE7, PLAYBACK_OFFLOAD_DEVICE7},
+                     {PLAYBACK_OFFLOAD_DEVICE7, PLAYBACK_OFFLOAD_DEVICE7, -1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD8] =
-                     {PLAYBACK_OFFLOAD_DEVICE8, PLAYBACK_OFFLOAD_DEVICE8},
+                     {PLAYBACK_OFFLOAD_DEVICE8, PLAYBACK_OFFLOAD_DEVICE8, -1, -1},
     [USECASE_AUDIO_PLAYBACK_OFFLOAD9] =
-                     {PLAYBACK_OFFLOAD_DEVICE9, PLAYBACK_OFFLOAD_DEVICE9},
+                     {PLAYBACK_OFFLOAD_DEVICE9, PLAYBACK_OFFLOAD_DEVICE9, -1, -1},
 
 
-    [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE},
-    [USECASE_AUDIO_RECORD_COMPRESS2] = {-1, -1},
-    [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1},
-    [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1},
-    [USECASE_AUDIO_RECORD_COMPRESS5] = {-1, -1},
-    [USECASE_AUDIO_RECORD_COMPRESS6] = {-1, -1},
-    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE,
-                                          LOWLATENCY_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE,
-                                  MULTIMEDIA2_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_HIFI] = {MULTIMEDIA2_PCM_DEVICE,
-                                   MULTIMEDIA2_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE},
-    [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX},
-    [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX},
-    [USECASE_AUDIO_HFP_SCO_DOWNLINK] = {HFP_ASM_RX_TX, HFP_ASM_RX_TX},
-    [USECASE_AUDIO_HFP_SCO_WB_DOWNLINK] = {HFP_ASM_RX_TX, HFP_ASM_RX_TX},
-    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                             MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_AUDIO_RECORD2] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                              MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_AUDIO_RECORD3] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                              MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_AUDIO_RECORD_COMPRESS] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE, -1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS2] = {COMPRESS_CAPTURE_DEVICE, COMPRESS_CAPTURE_DEVICE, -1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS3] = {-1, -1, -1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS4] = {-1, -1, -1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS5] = {-1, -1, -1, -1},
+    [USECASE_AUDIO_RECORD_COMPRESS6] = {-1, -1, -1, -1},
+    [USECASE_AUDIO_RECORD_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE, LOWLATENCY_PCM_DEVICE,
+                                         MSM_FRONTEND_DAI_VOICEMMODE2, MSM_FRONTEND_DAI_VOICEMMODE2},
+    [USECASE_AUDIO_RECORD_FM_VIRTUAL] = {MULTIMEDIA2_PCM_DEVICE, MULTIMEDIA2_PCM_DEVICE,
+                                        MSM_FRONTEND_DAI_MULTIMEDIA2, MSM_FRONTEND_DAI_MULTIMEDIA2},
+    [USECASE_AUDIO_RECORD_HIFI] = {MULTIMEDIA2_PCM_DEVICE, MULTIMEDIA2_PCM_DEVICE,
+                                  MSM_FRONTEND_DAI_MULTIMEDIA2, MSM_FRONTEND_DAI_MULTIMEDIA2},
+    [USECASE_AUDIO_PLAYBACK_FM] = {FM_PLAYBACK_PCM_DEVICE, FM_CAPTURE_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_HFP_SCO] = {HFP_PCM_RX, HFP_SCO_RX,
+                              MSM_FRONTEND_DAI_MULTIMEDIA6, MSM_FRONTEND_DAI_MULTIMEDIA6},
+    [USECASE_AUDIO_HFP_SCO_WB] = {HFP_PCM_RX, HFP_SCO_RX,
+                                 MSM_FRONTEND_DAI_MULTIMEDIA6, MSM_FRONTEND_DAI_MULTIMEDIA6},
+    [USECASE_AUDIO_HFP_SCO_DOWNLINK] = {HFP_ASM_RX_TX, HFP_ASM_RX_TX,
+                                       MSM_FRONTEND_DAI_MULTIMEDIA21, MSM_FRONTEND_DAI_MULTIMEDIA21},
+    [USECASE_AUDIO_HFP_SCO_WB_DOWNLINK] = {HFP_ASM_RX_TX, HFP_ASM_RX_TX,
+                                          MSM_FRONTEND_DAI_MULTIMEDIA21, MSM_FRONTEND_DAI_MULTIMEDIA21},
+    [USECASE_VOICE_CALL] = {VOICE_CALL_PCM_DEVICE, VOICE_CALL_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_PLAYBACK_MMAP] = {MMAP_PLAYBACK_PCM_DEVICE,
-            MMAP_PLAYBACK_PCM_DEVICE},
+            MMAP_PLAYBACK_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_RECORD_MMAP] = {MMAP_RECORD_PCM_DEVICE,
-            MMAP_RECORD_PCM_DEVICE},
-    [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE},
-    [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE},
-    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE},
-    [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE},
+            MMAP_RECORD_PCM_DEVICE, -1, -1},
+    [USECASE_VOICE2_CALL] = {VOICE2_CALL_PCM_DEVICE, VOICE2_CALL_PCM_DEVICE, -1, -1},
+    [USECASE_VOLTE_CALL] = {VOLTE_CALL_PCM_DEVICE, VOLTE_CALL_PCM_DEVICE, -1, -1},
+    [USECASE_QCHAT_CALL] = {QCHAT_CALL_PCM_DEVICE, QCHAT_CALL_PCM_DEVICE, -1, -1},
+    [USECASE_VOWLAN_CALL] = {VOWLAN_CALL_PCM_DEVICE, VOWLAN_CALL_PCM_DEVICE, -1, -1},
     [USECASE_VOICEMMODE1_CALL] = {VOICEMMODE1_CALL_PCM_DEVICE,
-                                  VOICEMMODE1_CALL_PCM_DEVICE},
+                                  VOICEMMODE1_CALL_PCM_DEVICE, -1, -1},
     [USECASE_VOICEMMODE2_CALL] = {VOICEMMODE2_CALL_PCM_DEVICE,
-                                  VOICEMMODE2_CALL_PCM_DEVICE},
-    [USECASE_COMPRESS_VOIP_CALL] = {COMPRESS_VOIP_CALL_PCM_DEVICE, COMPRESS_VOIP_CALL_PCM_DEVICE},
-    [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE,
-                                   AUDIO_RECORD_PCM_DEVICE},
-    [USECASE_INCALL_REC_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
-                                     AUDIO_RECORD_PCM_DEVICE},
-    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE,
-                                                AUDIO_RECORD_PCM_DEVICE},
+                                  VOICEMMODE2_CALL_PCM_DEVICE, -1, -1},
+    [USECASE_COMPRESS_VOIP_CALL] = {COMPRESS_VOIP_CALL_PCM_DEVICE, COMPRESS_VOIP_CALL_PCM_DEVICE, -1, -1},
+    [USECASE_INCALL_REC_UPLINK] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                                  MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_INCALL_REC_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                                    MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                                               MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
     [USECASE_INCALL_REC_UPLINK_COMPRESS] = {COMPRESS_CAPTURE_DEVICE,
-                                            COMPRESS_CAPTURE_DEVICE},
+                                            COMPRESS_CAPTURE_DEVICE, -1, -1},
     [USECASE_INCALL_REC_DOWNLINK_COMPRESS] = {COMPRESS_CAPTURE_DEVICE,
-                                              COMPRESS_CAPTURE_DEVICE},
+                                              COMPRESS_CAPTURE_DEVICE, -1, -1},
     [USECASE_INCALL_REC_UPLINK_AND_DOWNLINK_COMPRESS] = {COMPRESS_CAPTURE_DEVICE,
-                                                         COMPRESS_CAPTURE_DEVICE},
+                                                         COMPRESS_CAPTURE_DEVICE, -1, -1},
     [USECASE_INCALL_MUSIC_UPLINK] = {INCALL_MUSIC_UPLINK_PCM_DEVICE,
-                                     INCALL_MUSIC_UPLINK_PCM_DEVICE},
+                                     INCALL_MUSIC_UPLINK_PCM_DEVICE,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA2,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA2},
     [USECASE_INCALL_MUSIC_UPLINK2] = {INCALL_MUSIC_UPLINK2_PCM_DEVICE,
-                                      INCALL_MUSIC_UPLINK2_PCM_DEVICE},
-    [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1},
-    [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE},
+                                      INCALL_MUSIC_UPLINK2_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_SPKR_CALIB_RX] = {SPKR_PROT_CALIB_RX_PCM_DEVICE, -1, -1, -1},
+    [USECASE_AUDIO_SPKR_CALIB_TX] = {-1, SPKR_PROT_CALIB_TX_PCM_DEVICE, -1, -1},
 
     [USECASE_AUDIO_PLAYBACK_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
-                                          AFE_PROXY_RECORD_PCM_DEVICE},
+                                          AFE_PROXY_RECORD_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_RECORD_AFE_PROXY] = {AFE_PROXY_PLAYBACK_PCM_DEVICE,
-                                        AFE_PROXY_RECORD_PCM_DEVICE},
+                                        AFE_PROXY_RECORD_PCM_DEVICE, -1, -1},
     [USECASE_AUDIO_RECORD_AFE_PROXY2] = {AFE_PROXY_RECORD2_PCM_DEVICE,
-                                        AFE_PROXY_RECORD2_PCM_DEVICE},
-    [USECASE_AUDIO_DSM_FEEDBACK] = {QUAT_MI2S_PCM_DEVICE, QUAT_MI2S_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1},
-    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = {TRANSCODE_LOOPBACK_RX_DEV_ID, -1},
-    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = {-1, TRANSCODE_LOOPBACK_TX_DEV_ID},
+                                        AFE_PROXY_RECORD2_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_DSM_FEEDBACK] = {QUAT_MI2S_PCM_DEVICE, QUAT_MI2S_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_PLAYBACK_SILENCE] = {MULTIMEDIA9_PCM_DEVICE, -1, -1, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_RX] = {TRANSCODE_LOOPBACK_RX_DEV_ID, -1, -1, -1},
+    [USECASE_AUDIO_TRANSCODE_LOOPBACK_TX] = {-1, TRANSCODE_LOOPBACK_TX_DEV_ID, -1, -1},
 
-    [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE, LOWLATENCY_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_VOIP] = {AUDIO_PLAYBACK_VOIP_PCM_DEVICE, AUDIO_PLAYBACK_VOIP_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_RECORD_VOIP] = {AUDIO_RECORD_VOIP_PCM_DEVICE, AUDIO_RECORD_VOIP_PCM_DEVICE, -1, -1},
+    [USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY] = {LOWLATENCY_PCM_DEVICE, LOWLATENCY_PCM_DEVICE,
+                                              MSM_FRONTEND_DAI_VOICEMMODE2,
+                                              MSM_FRONTEND_DAI_VOICEMMODE2},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM1] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE1, PLAYBACK_INTERACTIVE_STRM_DEVICE1},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE1, PLAYBACK_INTERACTIVE_STRM_DEVICE1,
+                     MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM2] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE2, PLAYBACK_INTERACTIVE_STRM_DEVICE2},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE2, PLAYBACK_INTERACTIVE_STRM_DEVICE2,
+                     MSM_FRONTEND_DAI_MULTIMEDIA2, MSM_FRONTEND_DAI_MULTIMEDIA2},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM3] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE3, PLAYBACK_INTERACTIVE_STRM_DEVICE3},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE3, PLAYBACK_INTERACTIVE_STRM_DEVICE3, -1, -1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM4] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE4, PLAYBACK_INTERACTIVE_STRM_DEVICE4},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE4, PLAYBACK_INTERACTIVE_STRM_DEVICE4, -1, -1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM5] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE5, PLAYBACK_INTERACTIVE_STRM_DEVICE5},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE5, PLAYBACK_INTERACTIVE_STRM_DEVICE5, -1, -1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM6] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE6, PLAYBACK_INTERACTIVE_STRM_DEVICE6},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE6, PLAYBACK_INTERACTIVE_STRM_DEVICE6, -1, -1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM7] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE7, PLAYBACK_INTERACTIVE_STRM_DEVICE7},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE7, PLAYBACK_INTERACTIVE_STRM_DEVICE7, -1, -1},
     [USECASE_AUDIO_PLAYBACK_INTERACTIVE_STREAM8] =
-                     {PLAYBACK_INTERACTIVE_STRM_DEVICE8, PLAYBACK_INTERACTIVE_STRM_DEVICE8},
+                     {PLAYBACK_INTERACTIVE_STRM_DEVICE8, PLAYBACK_INTERACTIVE_STRM_DEVICE8, -1, -1},
     [USECASE_AUDIO_EC_REF_LOOPBACK] = {-1, -1}, /* pcm id updated from platform info file */
-    [USECASE_AUDIO_PLAYBACK_MEDIA] = {MEDIA_PCM_DEVICE,
-                                      MEDIA_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {SYS_NOTIFICATION_PCM_DEVICE,
-                                                 SYS_NOTIFICATION_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {NAV_GUIDANCE_PCM_DEVICE,
-                                             NAV_GUIDANCE_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE,
-                                      PHONE_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE,
-                                                FRONT_PASSENGER_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE,
-                                          REAR_SEAT_PCM_DEVICE},
-    [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1},
-    [USECASE_ICC_CALL] = {ICC_PCM_DEVICE, ICC_PCM_DEVICE},
+    [USECASE_AUDIO_PLAYBACK_MEDIA] = {MEDIA_PCM_DEVICE, MEDIA_PCM_DEVICE,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION] = {SYS_NOTIFICATION_PCM_DEVICE, SYS_NOTIFICATION_PCM_DEVICE,
+                                                MSM_FRONTEND_DAI_MULTIMEDIA5, MSM_FRONTEND_DAI_MULTIMEDIA5},
+    [USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE] = {NAV_GUIDANCE_PCM_DEVICE, NAV_GUIDANCE_PCM_DEVICE,
+                                            MSM_FRONTEND_DAI_MULTIMEDIA2, MSM_FRONTEND_DAI_MULTIMEDIA2},
+    [USECASE_AUDIO_PLAYBACK_PHONE] = {PHONE_PCM_DEVICE, PHONE_PCM_DEVICE,
+                                     MSM_FRONTEND_DAI_MULTIMEDIA10, MSM_FRONTEND_DAI_MULTIMEDIA10},
+    [USECASE_AUDIO_PLAYBACK_ALERTS] = {ALERTS_PCM_DEVICE, ALERTS_PCM_DEVICE,
+                                      MSM_FRONTEND_DAI_MULTIMEDIA31, MSM_FRONTEND_DAI_MULTIMEDIA31},
+    [USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE, FRONT_PASSENGER_PCM_DEVICE,
+                                               MSM_FRONTEND_DAI_MULTIMEDIA23, MSM_FRONTEND_DAI_MULTIMEDIA23},
+    [USECASE_AUDIO_PLAYBACK_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE, REAR_SEAT_PCM_DEVICE,
+                                         MSM_FRONTEND_DAI_MULTIMEDIA22, MSM_FRONTEND_DAI_MULTIMEDIA22},
+    [USECASE_AUDIO_FM_TUNER_EXT] = {-1, -1, -1, -1},
+    [USECASE_ICC_CALL] = {ICC_PCM_DEVICE, ICC_PCM_DEVICE,
+                         MSM_FRONTEND_DAI_MULTIMEDIA9, MSM_FRONTEND_DAI_MULTIMEDIA9},
 
-    [USECASE_AUDIO_RECORD_BUS] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE, FRONT_PASSENGER_PCM_DEVICE},
-    [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE, REAR_SEAT_PCM_DEVICE},
-    [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = {-1, -1},
-    [USECASE_AUDIO_RECORD_ECHO_REF_EXT] = {MULTIMEDIA2_PCM_DEVICE, MULTIMEDIA2_PCM_DEVICE},
+    [USECASE_AUDIO_RECORD_BUS] = {AUDIO_RECORD_PCM_DEVICE, AUDIO_RECORD_PCM_DEVICE,
+                                 MSM_FRONTEND_DAI_MULTIMEDIA1, MSM_FRONTEND_DAI_MULTIMEDIA1},
+    [USECASE_AUDIO_RECORD_BUS_FRONT_PASSENGER] = {FRONT_PASSENGER_PCM_DEVICE, FRONT_PASSENGER_PCM_DEVICE,
+                                                 MSM_FRONTEND_DAI_MULTIMEDIA23, MSM_FRONTEND_DAI_MULTIMEDIA23},
+    [USECASE_AUDIO_RECORD_BUS_REAR_SEAT] = {REAR_SEAT_PCM_DEVICE, REAR_SEAT_PCM_DEVICE,
+                                           MSM_FRONTEND_DAI_MULTIMEDIA22, MSM_FRONTEND_DAI_MULTIMEDIA22},
+    [USECASE_AUDIO_PLAYBACK_SYNTHESIZER] = {-1, -1, -1, -1},
+    [USECASE_AUDIO_RECORD_ECHO_REF_EXT] = {MULTIMEDIA2_PCM_DEVICE, MULTIMEDIA2_PCM_DEVICE,
+                                          MSM_FRONTEND_DAI_MULTIMEDIA2, MSM_FRONTEND_DAI_MULTIMEDIA2},
 };
 
 /* Array to store sound devices */
@@ -648,6 +705,7 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_SYS] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_NAV] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_PHN] = "bus-speaker",
+    [SND_DEVICE_OUT_BUS_ALR] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_PAX] = "bus-speaker",
     [SND_DEVICE_OUT_BUS_RSE] = "bus-speaker",
     [SND_DEVICE_OUT_CALL_PROXY] = "call-proxy",
@@ -808,6 +866,17 @@ static const char * const device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_ICC] = "speaker-mic",
     [SND_DEVICE_IN_SYNTH_MIC] = "speaker-mic",
     [SND_DEVICE_IN_ECHO_REFERENCE] = "echo-reference",
+    [SND_DEVICE_IN_HANDSET_GENERIC_DMIC] = "dmic-endfire",
+    [SND_DEVICE_IN_HANDSET_GENERIC_6MIC] = "handset-6mic",
+    [SND_DEVICE_IN_HANDSET_GENERIC_8MIC] = "handset-8mic",
+    [SND_DEVICE_IN_HANDSET_GENERIC_DMIC_AND_EC_REF_LOOPBACK] = "handset-dmic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_GENERIC_QMIC_AND_EC_REF_LOOPBACK] = "handset-qmic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_EC_REF_LOOPBACK] = "handset-6mic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_HANDSET_GENERIC_8MIC_AND_EC_REF_LOOPBACK] = "handset-8mic-and-ec-ref-loopback",
+    [SND_DEVICE_IN_ECALL] = "handset-mic",
+    [SND_DEVICE_IN_SPEAKER_MIC2] = "speaker-mic2",
+    [SND_DEVICE_IN_SPEAKER_MIC3] = "speaker-mic3",
+    [SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_SPEAKER_MIC2] = "handset-6mic-and-speaker-mic2",
 };
 
 // Platform specific backend bit width table
@@ -849,6 +918,9 @@ static struct audio_effect_config effect_config_table[GET_IN_DEVICE_INDEX(SND_DE
 
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_AEC] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x01},
     [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_MIC)][EFFECT_NS] = {TX_VOICE_FLUENCEV5_SM, 0x0, 0x10EAF, 0x02},
+
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)][EFFECT_AEC] = {TX_VOICE_TM_FLUENCE_EF, 0x0, 0x10EAF, 0x01},
+    [GET_IN_DEVICE_INDEX(SND_DEVICE_IN_VOICE_REC_DMIC_STEREO)][EFFECT_NS] = {TX_VOICE_TM_FLUENCE_EF, 0x0, 0x10EAF, 0x02},
 };
 
 static struct audio_fluence_mmsecns_config fluence_mmsecns_table = {TOPOLOGY_ID_MM_HFP_ECNS, MODULE_ID_MM_HFP_ECNS,
@@ -952,6 +1024,7 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_OUT_BUS_SYS] = 60,
     [SND_DEVICE_OUT_BUS_NAV] = 14,
     [SND_DEVICE_OUT_BUS_PHN] = 94,
+    [SND_DEVICE_OUT_BUS_ALR] = 60,
     [SND_DEVICE_OUT_BUS_PAX] = 60,
     [SND_DEVICE_OUT_BUS_RSE] = 60,
     [SND_DEVICE_OUT_CALL_PROXY] = 32,
@@ -1102,6 +1175,8 @@ static int acdb_device_table[SND_DEVICE_MAX] = {
     [SND_DEVICE_IN_CALL_PROXY] = 33,
     [SND_DEVICE_IN_ICC] = 46,
     [SND_DEVICE_IN_SYNTH_MIC] = 11,
+    [SND_DEVICE_IN_SPEAKER_MIC2] = 11,
+    [SND_DEVICE_IN_SPEAKER_MIC3] = 11,
 };
 
 struct name_to_index {
@@ -1209,6 +1284,7 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_SYS)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_NAV)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_PHN)},
+    {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_ALR)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_PAX)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_BUS_RSE)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_CALL_PROXY)},
@@ -1367,6 +1443,16 @@ static struct name_to_index snd_device_name_index[SND_DEVICE_MAX] = {
     {TO_NAME_INDEX(SND_DEVICE_OUT_ICC)},
     {TO_NAME_INDEX(SND_DEVICE_OUT_SYNTH_SPKR)},
     {TO_NAME_INDEX(SND_DEVICE_IN_SYNTH_MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_DMIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_6MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_8MIC)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_DMIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_QMIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_8MIC_AND_EC_REF_LOOPBACK)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_MIC2)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_SPEAKER_MIC3)},
+    {TO_NAME_INDEX(SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_SPEAKER_MIC2)},
 };
 
 static char * backend_tag_table[SND_DEVICE_MAX] = {0};
@@ -1392,6 +1478,8 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_OFFLOAD9)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_MMAP)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD2)},
+    {TO_NAME_INDEX(USECASE_AUDIO_RECORD3)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS2)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_COMPRESS3)},
@@ -1436,6 +1524,7 @@ static struct name_to_index usecase_name_index[AUDIO_USECASE_MAX] = {
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_NAV_GUIDANCE)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_PHONE)},
+    {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_ALERTS)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER)},
     {TO_NAME_INDEX(USECASE_AUDIO_PLAYBACK_REAR_SEAT)},
     {TO_NAME_INDEX(USECASE_AUDIO_RECORD_VOIP_LOW_LATENCY)},
@@ -2442,6 +2531,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     backend_tag_table[SND_DEVICE_OUT_CALL_PROXY] = strdup("call-proxy");
     backend_tag_table[SND_DEVICE_OUT_HAPTICS] = strdup("haptics");
     backend_tag_table[SND_DEVICE_IN_CALL_PROXY] = strdup("call-proxy-in");
+    backend_tag_table[SND_DEVICE_IN_SPEAKER_MIC2] = strdup("speaker-mic2");
+    backend_tag_table[SND_DEVICE_IN_SPEAKER_MIC3] = strdup("speaker-mic3");
 
     hw_interface_table[SND_DEVICE_OUT_HANDSET] = strdup("SLIMBUS_0_RX");
     hw_interface_table[SND_DEVICE_OUT_SPEAKER] = strdup("SLIMBUS_0_RX");
@@ -2542,6 +2633,7 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_BUS_SYS] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_BUS_NAV] = strdup("TERT_TDM_RX_1");
     hw_interface_table[SND_DEVICE_OUT_BUS_PHN] = strdup("TERT_TDM_RX_2");
+    hw_interface_table[SND_DEVICE_OUT_BUS_ALR] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_BUS_PAX] = strdup("QUAT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_BUS_RSE] = strdup("QUIN_TDM_RX_0");
     hw_interface_table[SND_DEVICE_OUT_CALL_PROXY] = strdup("CALL_PROXY_RX");
@@ -2637,8 +2729,6 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_IN_CAPTURE_FM] = strdup("SLIMBUS_8_TX");
     hw_interface_table[SND_DEVICE_IN_AANC_HANDSET_MIC] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_QUAD_MIC] = strdup("SLIMBUS_0_TX");
-    hw_interface_table[SND_DEVICE_IN_HANDSET_DMIC_STEREO] = strdup("SLIMBUS_0_TX");
-    hw_interface_table[SND_DEVICE_IN_SPEAKER_DMIC_STEREO] = strdup("SLIMBUS_0_TX");
     hw_interface_table[SND_DEVICE_IN_CAPTURE_VI_FEEDBACK] = strdup("SLIMBUS_4_TX");
     hw_interface_table[SND_DEVICE_IN_CAPTURE_VI_FEEDBACK_MONO_1] = strdup("SLIMBUS_4_TX");
     hw_interface_table[SND_DEVICE_IN_CAPTURE_VI_FEEDBACK_MONO_2] = strdup("SLIMBUS_4_TX");
@@ -2691,6 +2781,8 @@ static void set_platform_defaults(struct platform_data * my_data)
     hw_interface_table[SND_DEVICE_OUT_SYNTH_SPKR] = strdup("TERT_TDM_RX_0");
     hw_interface_table[SND_DEVICE_IN_SYNTH_MIC] = strdup("TERT_TDM_TX_0");
     hw_interface_table[SND_DEVICE_IN_ECHO_REFERENCE] = strdup("SEC_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC2] = strdup("QUAT_TDM_TX_0");
+    hw_interface_table[SND_DEVICE_IN_SPEAKER_MIC3] = strdup("SEN_TDM_TX_0");
     my_data->max_mic_count = PLATFORM_DEFAULT_MIC_COUNT;
 
      /*remove ALAC & APE from DSP decoder list based on software decoder availability*/
@@ -3066,6 +3158,10 @@ static void get_source_mic_type(struct platform_data * my_data)
 {
     // support max to mono, example if max count is 3, usecase supports Three, dual and mono mic
     switch (my_data->max_mic_count) {
+        case 10:
+            my_data->source_mic_type |= SOURCE_DEC_MIC;
+        case 8:
+            my_data->source_mic_type |= SOURCE_OCT_MIC;
         case 6:
             my_data->source_mic_type |= SOURCE_HEX_MIC;
         case 4:
@@ -3670,6 +3766,12 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: Could not find the symbol acdb_send_audio_cal_v4 from %s",
                   __func__, LIB_ACDB_LOADER);
 
+        my_data->acdb_send_audio_cal_v6 = (acdb_send_audio_cal_v6_t)dlsym(my_data->acdb_handle,
+                                                    "acdb_loader_send_audio_cal_v6");
+        if (!my_data->acdb_send_audio_cal_v6)
+            ALOGE("%s: Could not find the symbol acdb_send_audio_cal_v6 from %s",
+                  __func__, LIB_ACDB_LOADER);
+
         my_data->acdb_set_audio_cal = (acdb_set_audio_cal_t)dlsym(my_data->acdb_handle,
                                                     "acdb_loader_set_audio_cal_v2");
         if (!my_data->acdb_set_audio_cal)
@@ -3734,10 +3836,10 @@ void *platform_init(struct audio_device *adev)
             ALOGE("%s: dlsym error %s for acdb_loader_init_v3", __func__, dlerror());
         }
 
-        my_data->acdb_init = (acdb_init_t)dlsym(my_data->acdb_handle,
-                                                     "acdb_loader_init_v3");
+        my_data->acdb_init = (acdb_init_v2_t)dlsym(my_data->acdb_handle,
+                                                     "acdb_loader_init_v2");
         if (my_data->acdb_init == NULL) {
-            ALOGE("%s: dlsym error %s for acdb_loader_init_v3", __func__, dlerror());
+            ALOGE("%s: dlsym error %s for acdb_loader_init_v2", __func__, dlerror());
             goto acdb_init_fail;
         }
 
@@ -4045,6 +4147,31 @@ acdb_init_fail:
         my_data->current_backend_cfg[HDMI_TX_BACKEND].channels_mixer_ctl =
             strdup("QUAT_MI2S_TX Channels");
     }
+
+    my_data->current_backend_cfg[SEC_MI2S_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("SEC_MI2S_RX SampleRate");
+    my_data->current_backend_cfg[SEC_MI2S_RX_BACKEND].channels_mixer_ctl =
+        strdup("SEC_MI2S_RX Channels");
+    my_data->current_backend_cfg[TERT_MI2S_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("TERT_MI2S_RX Format");
+    my_data->current_backend_cfg[TERT_MI2S_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("TERT_MI2S_RX SampleRate");
+    my_data->current_backend_cfg[TERT_MI2S_RX_BACKEND].channels_mixer_ctl =
+        strdup("TERT_MI2S_RX Channels");
+
+    my_data->current_backend_cfg[TERT_MI2S_TX_BACKEND].bitwidth_mixer_ctl =
+        strdup("TERT_MI2S_TX Format");
+    my_data->current_backend_cfg[TERT_MI2S_TX_BACKEND].samplerate_mixer_ctl =
+        strdup("TERT_MI2S_TX SampleRate");
+    my_data->current_backend_cfg[TERT_MI2S_TX_BACKEND].channels_mixer_ctl =
+        strdup("TERT_MI2S_TX Channels");
+
+    my_data->current_backend_cfg[QUAT_MI2S_RX_BACKEND].bitwidth_mixer_ctl =
+        strdup("QUAT_MI2S_RX Format");
+    my_data->current_backend_cfg[QUAT_MI2S_RX_BACKEND].samplerate_mixer_ctl =
+        strdup("QUAT_MI2S_RX SampleRate");
+    my_data->current_backend_cfg[QUAT_MI2S_RX_BACKEND].channels_mixer_ctl =
+        strdup("QUAT_MI2S_RX Channels");
 
     my_data->current_backend_cfg[SPDIF_TX_BACKEND].bitwidth_mixer_ctl =
         strdup("PRIM_SPDIF_TX Format");
@@ -4663,6 +4790,20 @@ int platform_get_pcm_device_id(audio_usecase_t usecase, int device_type)
     else
         device_id = pcm_device_table[usecase][1];
     return device_id;
+}
+
+int platform_get_fe_id(audio_usecase_t usecase, int device_type)
+{
+    int fe_id = -1;
+
+    if ((usecase >= AUDIO_USECASE_MAX) || (usecase <= USECASE_INVALID)) {
+        ALOGE("%s: invalid usecase case idx %d", __func__, usecase);
+        return fe_id;
+    }
+
+    fe_id = pcm_device_table[usecase][device_type+FE_ID_TABLE_INDEX];
+
+    return fe_id;
 }
 
 uint64_t getQtime()
@@ -5480,6 +5621,15 @@ int platform_get_backend_index(snd_device_t snd_device)
                         port = HEADSET_TX_BACKEND;
                 else if (strcmp(backend_tag_table[snd_device], "call-proxy-in") == 0)
                         port = CALL_PROXY_TX_BACKEND;
+                else if (!strncmp(platform_get_snd_device_backend_interface(snd_device),
+                         "QUAT_TDM_TX_0", sizeof("QUAT_TDM_TX_0")))
+                         port = QUAT_TDM_TX_BACKEND;
+                else if (!strncmp(platform_get_snd_device_backend_interface(snd_device),
+                         "SEN_TDM_TX_0", sizeof("SEN_TDM_TX_0")))
+                        port = SEN_TDM_TX_BACKEND;
+                else if (!strncmp(platform_get_snd_device_backend_interface(snd_device),
+                         "TERT_MI2S_TX", sizeof("TERT_MI2S_TX")))
+                        port = TERT_MI2S_TX_BACKEND;
         }
     } else {
         ALOGW("%s:napb: Invalid device - %d ", __func__, snd_device);
@@ -5493,10 +5643,10 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
                                     int app_type)
 {
     struct platform_data *my_data = (struct platform_data *)platform;
-    int acdb_dev_id, acdb_dev_type;
+    int acdb_dev_id, acdb_dev_type, path;
     int snd_device = SND_DEVICE_OUT_SPEAKER;
     int new_snd_device[SND_DEVICE_OUT_END] = {0};
-    int i, num_devices = 1;
+    int i, num_devices = 1, fe_id = -1;
     bool is_incall_rec_usecase = false;
     snd_device_t incall_rec_device;
     int sample_rate = DEFAULT_OUTPUT_SAMPLING_RATE;
@@ -5609,6 +5759,26 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
         else
             acdb_dev_type = ACDB_DEV_TYPE_IN;
 
+        path = acdb_dev_type-1;
+        fe_id = platform_get_fe_id(usecase->id, path);
+
+#ifdef PLATFORM_AUTO
+        if (my_data->acdb_send_audio_cal_v6 && (fe_id != -1) ) {
+            my_data->acdb_send_audio_cal_v6(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, fe_id,
+                                            backend_cfg.sample_rate, CAL_MODE_SEND, CAL_OFFSET_ASM_TOP);
+        } else if (my_data->acdb_send_audio_cal_v4) {
+            my_data->acdb_send_audio_cal_v4(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, path,
+                                            backend_cfg.sample_rate);
+        } else if (my_data->acdb_send_audio_cal_v3) {
+            my_data->acdb_send_audio_cal_v3(acdb_dev_id, acdb_dev_type,
+                                            app_type, sample_rate, i);
+        } else if (my_data->acdb_send_audio_cal) {
+            my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
+                                         sample_rate);
+        }
+#else
         if (my_data->acdb_send_audio_cal_v4) {
             my_data->acdb_send_audio_cal_v4(acdb_dev_id, acdb_dev_type,
                                             app_type, sample_rate, i,
@@ -5620,6 +5790,7 @@ int platform_send_audio_calibration(void *platform, struct audio_usecase *usecas
             my_data->acdb_send_audio_cal(acdb_dev_id, acdb_dev_type, app_type,
                                          sample_rate);
         }
+#endif
     }
 
     /* send haptics audio calibration */
@@ -6311,6 +6482,31 @@ int platform_split_snd_device(void *platform,
         new_snd_devices[0] = SND_DEVICE_IN_HANDSET_8MIC;
         new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
         ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_GENERIC_DMIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_GENERIC_DMIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_GENERIC_QMIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_GENERIC_6MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_GENERIC_8MIC_AND_EC_REF_LOOPBACK == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_GENERIC_8MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_EC_REF_LOOPBACK;
+        ret = 0;
+    } else if (SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_SPEAKER_MIC2 == snd_device) {
+        *num_devices = 2;
+        new_snd_devices[0] = SND_DEVICE_IN_HANDSET_GENERIC_6MIC;
+        new_snd_devices[1] = SND_DEVICE_IN_SPEAKER_MIC2;
+        ret = 0;
     }
 
 
@@ -6866,9 +7062,8 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
             snd_device = SND_DEVICE_OUT_SPEAKER_VBAT;
           else if (my_data->is_wsa_speaker)
             snd_device = SND_DEVICE_OUT_SPEAKER_WSA;
-          else {
+          else
             snd_device = SND_DEVICE_OUT_SPEAKER;
-          }
     } else if (is_sco_out_device_type(&devices)) {
         if (adev->swb_speech_mode != SPEECH_MODE_INVALID)
                 snd_device = SND_DEVICE_OUT_BT_SCO_SWB;
@@ -6922,6 +7117,7 @@ snd_device_t platform_get_output_snd_device(void *platform, struct stream_out *o
         ALOGE("%s: Unknown device(s) %#x", __func__, get_device_types(&devices));
     }
 exit:
+    clear_devices(&devices);
     ALOGV("%s: exit: snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
@@ -7373,7 +7569,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
                (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
                (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is buit-in mic or back mic
                 compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) &&
-               (my_data->fluence_in_audio_rec == true &&       //  AND fluencepro is enabled
+               (my_data->fluence_in_audio_rec == true &&  (channel_count == 4)  && //  AND fluencepro is enabled
                 my_data->fluence_type & FLUENCE_QUAD_MIC) &&
                (source == AUDIO_SOURCE_CAMCORDER ||           // AND source is cam/mic/unprocessed
                 source == AUDIO_SOURCE_UNPROCESSED ||
@@ -7381,36 +7577,55 @@ snd_device_t platform_get_input_snd_device(void *platform,
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 platform_set_echo_reference(adev, true, out_devices);
     } else if (my_data->use_generic_handset == true &&          // System prop is enabled
-               (my_data->ambisonic_capture == true) &&          // Enable Ambisonic capture
-               (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
-               (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||    // AND device is Built-in
-                compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) &&       // OR Back-mic
+              (my_data->source_mic_type & SOURCE_QUAD_MIC) &&  // AND 4mic is available
+               (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC|AUDIO_DEVICE_IN_SPEAKER_MIC2) ||
+                compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||   // AND device is Built-in
+                compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) &&
+                     // OR Back-mic
                (source == AUDIO_SOURCE_MIC ||                   // AND source is MIC for 16bit
                 source == AUDIO_SOURCE_UNPROCESSED ||           // OR unprocessed for 24bit
-                source == AUDIO_SOURCE_CAMCORDER) &&            // OR camera usecase
-                ((int)channel_mask == (int)AUDIO_CHANNEL_INDEX_MASK_4) && // AND 4mic channel mask
-                (sample_rate == 48000)) {             // AND sample rate is 48Khz
+                source == AUDIO_SOURCE_CAMCORDER)) {            // OR camera usecase
+
+            if ( my_data->ambisonic_capture == true )
+            {
                 snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
                 /* Below check is true only in LA build to set
-                   ambisonic profile. In LE hal client will set profile
-                 */
+                ambisonic profile. In LE hal client will set profile
+                */
                 if (my_data->ambisonic_profile == true &&
                     in != NULL)
                     strlcpy(in->profile, "record_ambisonic",
                             sizeof(in->profile));
 
                 if (in != NULL && !strncmp(in->profile, "record_ambisonic",
-                                           strlen("record_ambisonic"))) {
+                                        strlen("record_ambisonic")))
+                {
                     /* Validate input stream configuration for
-                       Ambisonic capture.
-                     */
+                    Ambisonic capture.
+                    */
                     if (((int)channel_mask != (int)AUDIO_CHANNEL_INDEX_MASK_4) ||
-                         (sample_rate != 48000)) {
-                          snd_device = SND_DEVICE_NONE;
-                          ALOGW("Unsupported Input configuration for ambisonic capture");
-                          goto exit;
+                        (sample_rate != 48000))
+                    {
+                        snd_device = SND_DEVICE_NONE;
                     }
                 }
+            }
+            else if (my_data->source_mic_type & SOURCE_DEC_MIC) {
+                if(compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC|AUDIO_DEVICE_IN_SPEAKER_MIC2))
+                    snd_device = SND_DEVICE_IN_HANDSET_GENERIC_6MIC_AND_SPEAKER_MIC2;
+                else if(channel_count == 6)
+                    snd_device = SND_DEVICE_IN_HANDSET_GENERIC_6MIC;
+            } else if (my_data->source_mic_type & SOURCE_OCT_MIC) {
+                   snd_device = SND_DEVICE_IN_HANDSET_GENERIC_8MIC;
+            } else if (my_data->source_mic_type & SOURCE_HEX_MIC) {
+                   snd_device = SND_DEVICE_IN_HANDSET_GENERIC_6MIC;
+            } else if (my_data->source_mic_type & SOURCE_QUAD_MIC) {
+                   snd_device = SND_DEVICE_IN_HANDSET_GENERIC_QMIC;
+            } else if (my_data->source_mic_type & SOURCE_DUAL_MIC) {
+                   snd_device = SND_DEVICE_IN_HANDSET_GENERIC_DMIC;
+            }  else
+                snd_device = SND_DEVICE_NONE;
+
     } else if (source == AUDIO_SOURCE_CAMCORDER) {
         if (compare_device_type(&in_devices, AUDIO_DEVICE_IN_BUILTIN_MIC) ||
             compare_device_type(&in_devices, AUDIO_DEVICE_IN_BACK_MIC)) {
@@ -7766,6 +7981,7 @@ snd_device_t platform_get_input_snd_device(void *platform,
         }
     }
 exit:
+    clear_devices(&in_devices);
     ALOGV("%s: exit: in_snd_device(%s)", __func__, device_table[snd_device]);
     return snd_device;
 }
@@ -9116,6 +9332,7 @@ int64_t platform_render_latency(struct stream_out *out)
         case USECASE_AUDIO_PLAYBACK_SYS_NOTIFICATION:
         case USECASE_AUDIO_PLAYBACK_FRONT_PASSENGER:
         case USECASE_AUDIO_PLAYBACK_PHONE:
+        case USECASE_AUDIO_PLAYBACK_ALERTS:
             delay = LOW_LATENCY_PLATFORM_DELAY;
             break;
         case USECASE_AUDIO_PLAYBACK_OFFLOAD:
@@ -10593,6 +10810,11 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
     int backend_idx = platform_get_backend_index(snd_device);
     int ret = 0;
     struct audio_backend_cfg backend_cfg;
+    struct audio_custom_mtmx_in_params_info in_info = {0};
+    struct audio_custom_mtmx_in_params *in_params = NULL;
+    int new_snd_devices[SND_DEVICE_OUT_END] = {0};
+    int i, num_devices = 1;
+    struct platform_data *my_data = (struct platform_data *)adev->platform;
 
     backend_cfg.passthrough_enabled = false;
 
@@ -10631,12 +10853,46 @@ bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
           backend_cfg.format,
           backend_idx, usecase->id,
           platform_get_snd_device_name(snd_device));
-    if (platform_check_capture_codec_backend_cfg(adev, backend_idx,
-                                                 &backend_cfg, snd_device)) {
-        ret = platform_set_codec_backend_cfg(adev, usecase, snd_device,
+
+    if (is_combo_audio_input_device(&usecase->stream.in->device_list) &&
+        platform_split_snd_device(my_data, snd_device, &num_devices,
+        new_snd_devices) == 0){
+
+        in_info.usecase_id[0] = usecase->id;
+        in_info.op_channels = backend_cfg.channels;
+        in_params = platform_get_custom_mtmx_in_params(adev->platform, &in_info);
+
+        for (i = 0; i < num_devices; i++) {
+            if (in_params) {
+                if(new_snd_devices[i] == SND_DEVICE_IN_SPEAKER_MIC2){
+                    backend_cfg.channels = in_params->i2s_ch;
+                    ALOGD("%s txbecf: set channels to %d from mtmx in params",__func__,in_params->i2s_ch);
+                } else {
+                    ALOGD("%s: txbecf: set channels to %d from mtmx in params",
+                       __func__, in_params->mic_ch);
+                    backend_cfg.channels = in_params->mic_ch;
+                }
+            }
+            if (platform_check_capture_codec_backend_cfg(adev, platform_get_backend_index(new_snd_devices[i]),
+                                                 &backend_cfg, new_snd_devices[i])) {
+                ret = platform_set_codec_backend_cfg(adev, usecase, new_snd_devices[i],
                                              backend_cfg);
-        if(!ret)
-            return true;
+                if(!ret)
+                    ret = true;
+                else
+                    ret = false;
+            }
+       }
+       return ret;
+
+    } else {
+        if (platform_check_capture_codec_backend_cfg(adev, backend_idx,
+                                                 &backend_cfg, snd_device)) {
+            ret = platform_set_codec_backend_cfg(adev, usecase, snd_device,
+                                             backend_cfg);
+            if(!ret)
+                return true;
+        }
     }
 
     return false;
@@ -10741,7 +10997,7 @@ done:
     return be_dai_id;
 }
 
-int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id)
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id, int32_t fe_id)
 {
     int ret = 0;
     if ((usecase <= USECASE_INVALID) || (usecase >= AUDIO_USECASE_MAX)) {
@@ -10756,6 +11012,10 @@ int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t p
     }
     ALOGV("%s: pcm_device_table[%d][%d] = %d", __func__, usecase, type, pcm_id);
     pcm_device_table[usecase][type] = pcm_id;
+
+    ALOGV("%s: pcm_device_table[%d][%d] = %d", __func__, usecase, type+2, fe_id);
+    pcm_device_table[usecase][type+FE_ID_TABLE_INDEX] = fe_id;
+
 done:
     return ret;
 }
@@ -11908,7 +12168,10 @@ int platform_spkr_prot_is_wsa_analog_mode(void *adev __unused)
    if ((!strcmp(snd_card_name, "msm8953-snd-card-mtp")) ||
        (!strcmp(snd_card_name, "msm8953-sku4-snd-card")) ||
        (!strcmp(snd_card_name, "sdm439-sku1-snd-card")) ||
-       (!strcmp(snd_card_name, "sdm439-snd-card-mtp")))
+       (!strcmp(snd_card_name, "sdm439-snd-card-mtp")) ||
+       (!strcmp(snd_card_name, "lahaina-yupikiot-snd-card")) ||
+       (!strcmp(snd_card_name, "bengal-qrd-snd-card")) ||
+       (!strcmp(snd_card_name, "bengal-scubaqrd-snd-card")))
        return 1;
    else
        return 0;
@@ -12553,6 +12816,48 @@ bool platform_set_microphone_map(void *platform, snd_device_t in_snd_device,
     my_data->mic_map[in_snd_device].microphones[m_count] = *info;
     return true;
 }
+
+#ifdef SOFT_VOLUME
+int platform_get_soft_step_volume_params(struct soft_step_volume_params *volume_params, int uc_id)
+{
+    int ret = 0;
+
+    if (volume_params == NULL) {
+        ALOGE("%s: Invalid volume_params", __func__);
+        ret = -EINVAL;
+        goto done;
+    }
+
+    if ((usecase_volume_params[uc_id][0] < 0) || (usecase_volume_params[uc_id][1] < 0) || (usecase_volume_params[uc_id][2] < 0) ) {
+        ALOGE("%s: soft step volume params values are not set dynamically,will use default static values set through cal data",__func__);
+        ret = -EINVAL;
+    } else {
+        memcpy(volume_params,usecase_volume_params[uc_id],sizeof(struct soft_step_volume_params));
+        ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, volume_params->period, volume_params->step, volume_params->curve);
+    }
+done:
+    return ret;
+}
+
+int platform_set_soft_step_volume_params(int uc_id, int period, int step, int curve)
+{
+    int ret = 0;
+
+    ALOGV("%s: usecase-id = %d, ramp period = %d, ramp step = %d, ramp curve = %d",
+           __func__, uc_id, period, step, curve);
+    if ((uc_id < 0) || (uc_id >= AUDIO_USECASE_MAX)) {
+        ALOGE("%s : invalid usecase id", __func__);
+	    ret = -EINVAL;
+    }
+
+    usecase_volume_params[uc_id][0] = period;
+    usecase_volume_params[uc_id][1] = step;
+    usecase_volume_params[uc_id][2] = curve;
+
+    return ret;
+}
+#endif
 
 int platform_get_active_microphones(void *platform, unsigned int channels,
                                     audio_usecase_t uc_id,

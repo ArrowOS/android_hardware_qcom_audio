@@ -9,12 +9,47 @@
  * You may obtain a copy of the License at
  *
  *      http://www.apache.org/licenses/LICENSE-2.0
- *
+
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
+
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted (subject to the limitations in the
+ * disclaimer below) provided that the following conditions are met:
+
+ *  * Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+
+ *   * Redistributions in binary form must reproduce the above
+ *     copyright notice, this list of conditions and the following
+ *     disclaimer in the documentation and/or other materials provided
+ *     with the distribution.
+
+ *   * Neither the name of Qualcomm Innovation Center, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+
+ * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE
+ * GRANTED BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT
+ * HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED
+ * WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+ * IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+ * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+ * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
  */
 
 #ifndef AUDIO_PLATFORM_API_H
@@ -133,6 +168,7 @@ struct audio_custom_mtmx_in_params {
     struct audio_custom_mtmx_in_params_info in_info;
     uint32_t ip_channels;
     uint32_t mic_ch;
+    uint32_t i2s_ch;
     uint32_t ec_ref_ch;
     struct audio_custom_mtmx_params_in_ch_info in_ch_info[MAX_IN_CHANNELS];
 };
@@ -257,6 +293,7 @@ void platform_add_app_type(const char *uc_type,
 
 /* From platform_info.c */
 int platform_info_init(const char *filename, void *, caller_t);
+void platform_info_deinit();
 
 void platform_snd_card_update(void *platform, card_status_t scard_status);
 
@@ -271,7 +308,7 @@ bool platform_check_and_set_codec_backend_cfg(struct audio_device* adev,
 bool platform_check_and_set_capture_codec_backend_cfg(struct audio_device* adev,
                    struct audio_usecase *usecase, snd_device_t snd_device);
 int platform_get_usecase_index(const char * usecase);
-int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id);
+int platform_set_usecase_pcm_id(audio_usecase_t usecase, int32_t type, int32_t pcm_id, int32_t fe_id);
 void platform_set_echo_reference(struct audio_device *adev, bool enable,
                                  struct listnode *out_devices);
 int platform_check_and_set_swap_lr_channels(struct audio_device *adev, bool swap_channels);
@@ -440,4 +477,8 @@ int platform_set_island_cfg_on_device(struct audio_device* adev, snd_device_t sn
 void platform_reset_island_power_status(void *platform, snd_device_t snd_device);
 void platform_is_volume_boost_supported_device(void *platform, struct listnode *devices);
 const char *platform_get_mixer_FM_RX_control(struct audio_device *adev);
+#ifdef SOFT_VOLUME
+int platform_set_soft_step_volume_params(int uc_id, int period, int step, int curve);
+int platform_get_soft_step_volume_params(struct soft_step_volume_params *volume_params, int uc_id);
+#endif
 #endif // AUDIO_PLATFORM_API_H

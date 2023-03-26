@@ -4,6 +4,10 @@
  *
  * Copyright (C) 2013 The Android Open Source Project
  *
+ * Changes from Qualcomm Innovation Center are provided under the following license:
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause-Clear
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -170,7 +174,13 @@ int acdb_init_v2(struct mixer *mixer)
         ctl = mixer_get_ctl_by_name(mixer, CVD_VERSION_MIXER_CTL);
         if (!ctl) {
             ALOGE("%s: Could not get ctl for mixer cmd - %s",  __func__, CVD_VERSION_MIXER_CTL);
+#ifdef PLATFORM_AUTO
+            ALOGE("%s: Ctl check bypassed in automotive platform for mixer cmd - %s",
+                   __func__, CVD_VERSION_MIXER_CTL);
+            goto get_sound_card_name;
+#else
             goto cleanup;
+#endif
         }
         mixer_ctl_update(ctl);
 
@@ -185,6 +195,9 @@ int acdb_init_v2(struct mixer *mixer)
         }
     }
 
+#ifdef PLATFORM_AUTO
+get_sound_card_name:
+#endif
     /* Get Sound card name */
     snd_card_name = mixer_get_name(mixer);
     snd_card_name = platform_get_snd_card_name_for_acdb_loader(snd_card_name);
@@ -234,6 +247,19 @@ cleanup:
             list_remove(node);
             free(key_info);
         }
+
+        if (result < 0) {
+
+            if (snd_card_name)
+                free((void *)snd_card_name);
+
+            if (my_data->acdb_init_data.snd_card_name)
+                free(my_data->acdb_init_data.snd_card_name);
+
+            if (my_data)
+                platform_info_deinit();
+        }
+
         free(my_data);
     }
 

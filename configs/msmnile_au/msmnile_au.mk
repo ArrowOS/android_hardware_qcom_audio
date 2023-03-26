@@ -12,11 +12,11 @@ BOARD_USES_ALSA_AUDIO := true
 
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
 ifeq ($(TARGET_FWK_SUPPORTS_FULL_VALUEADDS),true)
-USE_CUSTOM_AUDIO_POLICY := 1
+USE_CUSTOM_AUDIO_POLICY := 0
 else
 USE_CUSTOM_AUDIO_POLICY := 0
 endif
-AUDIO_FEATURE_QSSI_COMPLIANCE := true
+AUDIO_FEATURE_QSSI_COMPLIANCE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_CAPTURE := false
 AUDIO_FEATURE_ENABLED_COMPRESS_INPUT := true
 AUDIO_FEATURE_ENABLED_CONCURRENT_CAPTURE := true
@@ -49,6 +49,10 @@ AUDIO_FEATURE_ENABLED_3D_AUDIO := false
 AUDIO_FEATURE_ENABLED_AHAL_EXT := false
 DOLBY_ENABLE := false
 AUDIO_FEATURE_ENABLED_EXTENDED_COMPRESS_FORMAT := true
+AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
+SOONG_CONFIG_NAMESPACES += tinycompressnamespace
+SOONG_CONFIG_tinycompressnamespace := ext_compress_format_enabled
+SOONG_CONFIG_tinycompressnamespace_ext_compress_format_enabled := true
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
@@ -60,38 +64,40 @@ ifeq ($(TARGET_HAS_GENERIC_KERNEL_HEADERS), true)
 AUDIO_FEATURE_ENABLED_GKI := true
 endif
 AUDIO_USE_DEEP_AS_PRIMARY_OUTPUT := false
-AUDIO_FEATURE_ENABLED_VBAT_MONITOR := true
+AUDIO_FEATURE_ENABLED_VBAT_MONITOR := false
 AUDIO_FEATURE_ENABLED_NT_PAUSE_TIMEOUT := true
-AUDIO_FEATURE_ENABLED_ANC_HEADSET := true
-AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := true
+AUDIO_FEATURE_ENABLED_ANC_HEADSET := false
+AUDIO_FEATURE_ENABLED_CUSTOMSTEREO := false
 AUDIO_FEATURE_ENABLED_FLUENCE := true
-AUDIO_FEATURE_ENABLED_HDMI_EDID := true
-AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := true
+AUDIO_FEATURE_ENABLED_HDMI_EDID := false
+AUDIO_FEATURE_ENABLED_HDMI_PASSTHROUGH := false
 #AUDIO_FEATURE_ENABLED_KEEP_ALIVE := true
-AUDIO_FEATURE_ENABLED_DISPLAY_PORT := true
+AUDIO_FEATURE_ENABLED_DISPLAY_PORT := false
 AUDIO_FEATURE_ENABLED_DS2_DOLBY_DAP := false
 AUDIO_FEATURE_ENABLED_HFP := true
 AUDIO_FEATURE_ENABLED_INCALL_MUSIC := false
-AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := true
+AUDIO_FEATURE_ENABLED_MULTI_VOICE_SESSIONS := false
 AUDIO_FEATURE_ENABLED_KPI_OPTIMIZE := true
-AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := true
+AUDIO_FEATURE_ENABLED_SPKR_PROTECTION := false
 AUDIO_FEATURE_ENABLED_ACDB_LICENSE := false
 AUDIO_FEATURE_ENABLED_DEV_ARBI := false
 AUDIO_FEATURE_ENABLED_DYNAMIC_LOG := true
-MM_AUDIO_ENABLED_FTM := true
+MM_AUDIO_ENABLED_FTM := false
 TARGET_USES_QCOM_MM_AUDIO := true
-AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := true
+AUDIO_FEATURE_ENABLED_SOURCE_TRACKING := false
 AUDIO_FEATURE_ENABLED_GEF_SUPPORT := true
 BOARD_SUPPORTS_QAHW := false
-AUDIO_FEATURE_ENABLED_RAS := true
-AUDIO_FEATURE_ENABLED_SND_MONITOR := false
+AUDIO_FEATURE_ENABLED_RAS := false
 AUDIO_FEATURE_ENABLED_DLKM := true
 AUDIO_FEATURE_ENABLED_USB_BURST_MODE := false
 AUDIO_FEATURE_ENABLED_SVA_MULTI_STAGE := true
 AUDIO_FEATURE_ENABLED_BATTERY_LISTENER := false
+AUDIO_FEATURE_ENABLED_SOFT_VOLUME:= true
 ##AUDIO_FEATURE_FLAGS
 
+ifneq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
 AUDIO_HARDWARE += audio.a2dp.default
+endif
 AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
 AUDIO_HARDWARE += audio.primary.msmnile
@@ -111,21 +117,31 @@ PRODUCT_PACKAGES += $(AUDIO_HAL_TEST_APPS)
 AUDIO_FEATURE_ENABLED_AUTO_HAL := true
 AUDIO_FEATURE_ENABLED_EXT_HW_PLUGIN := true
 AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL := true
+ifneq ( ,$(filter T Tiramisu 13, $(PLATFORM_VERSION)))
+AUDIO_FEATURE_ENABLED_AUDIO_CONTROL_HAL_AIDL := true
+endif
 ifneq ($(ENABLE_HYP),true)
 AUDIO_FEATURE_ENABLED_AUTO_AUDIOD := true
 
-ifneq ( ,$(filter msmnile_au msmnile_tb, $(TARGET_PRODUCT)))
+ifneq ( ,$(filter msmnile_au msmnile_au_km4 msmnile_au_ar msmnile_tb, $(TARGET_PRODUCT)))
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := true
-AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 else
 AUDIO_FEATURE_ENABLED_DAEMON_SUPPORT := false
-AUDIO_FEATURE_ENABLED_SILENT_BOOT := false
 endif
+AUDIO_FEATURE_ENABLED_SND_MONITOR := false
+else
+AUDIO_FEATURE_ENABLED_SND_MONITOR := true
+endif
+ifeq ($(ENABLE_AUDIO_LEGACY_TECHPACK),true)
+AUDIO_FEATURE_ENABLED_SILENT_BOOT := true
 endif
 AUDIO_FEATURE_ENABLED_FM_TUNER_EXT := true
 AUDIO_FEATURE_ENABLED_ICC := true
-ifneq ( ,$(filter S 12, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter S 12 T 13, $(PLATFORM_VERSION)))
 AUDIO_FEATURE_ENABLED_POWER_POLICY := true
+endif
+ifneq ( ,$(filter msmnile_gvmq msmnile_au msmnile_au_km4 msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX)$(TARGET_BOARD_DERIVATIVE_SUFFIX)))
+AUDIO_FEATURE_ENABLED_AUDIO_PARSERS := true
 endif
 ##AUTOMOTIVE_AUDIO_FEATURE_FLAGS
 
@@ -134,14 +150,20 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
 
+ifneq ( ,$(filter T 13, $(PLATFORM_VERSION)))
+ifneq ( ,$(filter msmnile_au msmnile_au_km4 msmnile_au_ar, $(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX))$(TARGET_BOARD_DERIVATIVE_SUFFIX))
+AUDIO_FEATURE_MMAP_AAUDIO = true
+endif
+endif
+
 #Automotive audio specific device overlays
 DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common_au/overlay
 
 PRODUCT_COPY_FILES += \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_io_policy.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_io_policy.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects.conf:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.conf \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
-    vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/mixer_paths_sa8295_adp.xml:$(TARGET_COPY_OUT_VENDOR)/etc/mixer_paths_sa8295_adp.xml \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_tuning_mixer.txt:$(TARGET_COPY_OUT_VENDOR)/etc/audio_tuning_mixer.txt \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/sound_trigger_platform_info.xml:$(TARGET_COPY_OUT_VENDOR)/etc/sound_trigger_platform_info.xml \
@@ -155,6 +177,10 @@ PRODUCT_COPY_FILES += \
     vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/audio_configs_stock.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_configs_stock.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
+
+#Automotive audio card defs dummpy files for elite and ar co-exit.
+PRODUCT_COPY_FILES += \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/msmnile_au/card-defs-dummy.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs-dummy.xml
 
 #XML Audio configuration files
 ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
@@ -346,10 +372,12 @@ vendor.audio.hal.output.suspend.supported=false
 #Enable AAudio MMAP/NOIRQ data path
 #1 is AAUDIO_POLICY_NEVER so it will not try MMAP
 #2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_policy=1
+ifneq ($(TARGET_BOARD_PLATFORM)$(TARGET_BOARD_SUFFIX), msmnile_gvmq)
+PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_policy=2
 #Allow EXCLUSIVE then fall back to SHARED.
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_exclusive_policy=1
+PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_exclusive_policy=2
 PRODUCT_VENDOR_PROPERTIES += aaudio.hw_burst_min_usec=2000
+endif
 
 #enable mirror-link feature
 PRODUCT_VENDOR_PROPERTIES += \
@@ -384,7 +412,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=false \
 vendor.audio.feature.compress_meta_data.enable=false \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=false \
 vendor.audio.feature.display_port.enable=false \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -417,10 +445,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=false \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 else
 # Non-Generic ODM varient related
 PRODUCT_ODM_PROPERTIES += \
@@ -432,7 +467,7 @@ vendor.audio.feature.compr_cap.enable=false \
 vendor.audio.feature.compress_in.enable=true \
 vendor.audio.feature.compress_meta_data.enable=true \
 vendor.audio.feature.compr_voip.enable=false \
-vendor.audio.feature.concurrent_capture.enable=false \
+vendor.audio.feature.concurrent_capture.enable=true \
 vendor.audio.feature.custom_stereo.enable=true \
 vendor.audio.feature.display_port.enable=true \
 vendor.audio.feature.dsm_feedback.enable=false \
@@ -465,10 +500,17 @@ vendor.audio.feature.deepbuffer_as_primary.enable=false \
 vendor.audio.feature.vbat.enable=true \
 vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
-vendor.audio.feature.snd_mon.enable=false \
 vendor.audio.feature.auto_hal.enable=true \
 vendor.audio.feature.synth.enable=true \
-vendor.audio.feature.powerpolicy.enable=true
+vendor.audio.feature.powerpolicy.enable=true \
+vendor.audio.feature.concurrent_pcm_record.enable=true
+ifeq ($(AUDIO_FEATURE_ENABLED_SND_MONITOR), true)
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=true
+else
+PRODUCT_ODM_PROPERTIES += \
+vendor.audio.feature.snd_mon.enable=false
+endif
 endif
 
 # for HIDL related packages
@@ -513,7 +555,7 @@ PRODUCT_PACKAGES_DEBUG += \
     AudioSettings
 
 # for HIDL related audiocontrol packages
-ifneq ($(PLATFORM_VERSION), 12)
+ifeq ( ,$(filter 12 13 T U UpsideDownCake 14,$(PLATFORM_VERSION)))
 PRODUCT_PACKAGES += \
     android.hardware.automotive.audiocontrol@2.0-service \
     android.hardware.automotive.audiocontrol@2.0
